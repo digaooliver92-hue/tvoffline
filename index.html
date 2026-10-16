@@ -37,9 +37,10 @@ let L=[],cur=0,pos=0,errs=0,mudoForcado=0,syncing=0,estado={};
 const db=new Promise((ok,er)=>{const r=indexedDB.open('tvo',1);r.onupgradeneeded=()=>r.result.createObjectStore('v');r.onsuccess=()=>ok(r.result);r.onerror=()=>er(r.error)});
 const tx=async(m,f)=>{const d=await db;return new Promise((ok,er)=>{const t=d.transaction('v',m),q=f(t.objectStore('v'));t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>er(t.error)})};
 const dget=k=>tx('readonly',s=>s.get(k)),dput=(k,v)=>tx('readwrite',s=>s.put(v,k)),ddel=k=>tx('readwrite',s=>s.delete(k)),dkeys=()=>tx('readonly',s=>s.getAllKeys());
+const fixHttps=(u,b)=>{try{if(location.protocol!='https:'||!/^https:/.test(b))return u;const x=new URL(u),l=new URL(b);if(x.protocol=='http:'&&x.pathname.startsWith(l.pathname.replace(/[^\/]*$/,'')))return l.origin+x.pathname+x.search}catch{}return u};
 const parse=(t,base)=>{const o=[];let n='';for(let l of t.split(/\r?\n/)){l=l.trim();if(!l)continue;
 if(l.startsWith('#EXTINF'))n=l.split(',').slice(1).join(',').trim();
-else if(l[0]!='#'){let u=l;try{u=new URL(l,/^https?:/.test(base)?base:undefined).href}catch{}if(/^https?:/.test(u))o.push({url:u,nome:n||decodeURIComponent(u.split('/').pop()),live:/\.m3u8?(\?|$)/i.test(u)});n=''}}return o};
+else if(l[0]!='#'){let u=l;try{u=new URL(l,/^https?:/.test(base)?base:undefined).href}catch{}u=fixHttps(u,base);if(/^https?:/.test(u))o.push({url:u,nome:n||decodeURIComponent(u.split('/').pop()),live:/\.m3u8?(\?|$)/i.test(u)});n=''}}return o};
 async function carregarLista(){let t=null;if(/^https?:/.test(C.lista)){try{const c=new AbortController();setTimeout(()=>c.abort(),8000);
 const r=await fetch(C.lista,{cache:'no-store',signal:c.signal});if(r.ok){t=await r.text();localStorage.tvtxt=t}}catch{}}
 if(t==null)t=localStorage.tvtxt||'';const n=parse(t,C.lista);if(n.length||!L.length)L=n}
