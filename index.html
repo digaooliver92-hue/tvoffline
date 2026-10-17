@@ -26,7 +26,7 @@ input:focus,select:focus,button:focus{outline:3px solid var(--ac);outline-offset
 <div class="g"><div><label for="aj">Ajuste</label><select id="aj"><option value="conter">Barras pretas</option><option value="cobrir">Preencher</option></select></div>
 <div><label for="rot">Girar vídeo</label><select id="rot"><option value="0">Não girar</option><option value="90">90° (TV virada)</option><option value="270">270°</option></select></div>
 <div><label for="som">Som</label><select id="som"><option value="1">Ligado</option><option value="0">Mudo</option></select></div></div>
-<button id="sync">Sincronizar agora</button><button id="limpa">Apagar vídeos baixados</button><button id="fecha">Voltar ao vídeo</button>
+<button id="sync">Sincronizar agora</button><button id="desat">Desativar e apagar esta lista</button><button id="limpa">Apagar vídeos baixados</button><button id="fecha">Voltar ao vídeo</button>
 <ul id="ls"></ul></div></div>
 <script>
 const $=s=>document.querySelector(s),V=[$('#a'),$('#b')],P=new URLSearchParams(location.search);
@@ -38,13 +38,14 @@ const db=new Promise((ok,er)=>{const r=indexedDB.open('tvo',1);r.onupgradeneeded
 const tx=async(m,f)=>{const d=await db;return new Promise((ok,er)=>{const t=d.transaction('v',m),q=f(t.objectStore('v'));t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>er(t.error)})};
 const dget=k=>tx('readonly',s=>s.get(k)),dput=(k,v)=>tx('readwrite',s=>s.put(v,k)),ddel=k=>tx('readwrite',s=>s.delete(k)),dkeys=()=>tx('readonly',s=>s.getAllKeys());
 const fixHttps=(u,b)=>{try{if(location.protocol!='https:'||!/^https:/.test(b))return u;const x=new URL(u),l=new URL(b);if(x.protocol=='http:'&&x.pathname.startsWith(l.pathname.replace(/[^\/]*$/,'')))return l.origin+x.pathname+x.search}catch{}return u};
+const fixUrl=u=>u.replace(/^http:\/\/167\.99\.4\.209:8181\//,'https://tvdigao92.duckdns.org:8443/');
 const altDe=u=>{const m=u.match(/^(https?:\/\/[^\/]+\/live\/[^\/]+)\/stream\.m3u8(\?.*)?$/);return m?m[1]+'/master_loop.mp4':''};
 const parse=(t,base)=>{const o=[];let n='';for(let l of t.split(/\r?\n/)){l=l.trim();if(!l)continue;
 if(l.startsWith('#EXTINF'))n=l.split(',').slice(1).join(',').trim();
-else if(l[0]!='#'){let u=l;try{u=new URL(l,/^https?:/.test(base)?base:undefined).href}catch{}u=fixHttps(u,base);if(/^https?:/.test(u))o.push({alt:altDe(u),url:u,nome:n||decodeURIComponent(u.split('/').pop()),live:/\.m3u8?(\?|$)/i.test(u)});n=''}}return o};
-async function carregarLista(){let t=null;if(/^https?:/.test(C.lista)){try{const c=new AbortController();setTimeout(()=>c.abort(),8000);
-const r=await fetch(C.lista,{cache:'no-store',signal:c.signal});if(r.ok){t=await r.text();localStorage.tvtxt=t}}catch{}}
-if(t==null)t=localStorage.tvtxt||'';const n=parse(t,C.lista);if(n.length||!L.length)L=n}
+else if(l[0]!='#'){let u=l;try{u=new URL(l,/^https?:/.test(base)?base:undefined).href}catch{}u=fixUrl(fixHttps(u,base));if(/^https?:/.test(u))o.push({alt:altDe(u),url:u,nome:n||decodeURIComponent(u.split('/').pop()),live:/\.m3u8?(\?|$)/i.test(u)});n=''}}return o};
+async function carregarLista(){const u=fixUrl(C.lista);let t=null;if(/^https?:/.test(u)){try{const c=new AbortController();setTimeout(()=>c.abort(),8000);
+const r=await fetch(u,{cache:'no-store',signal:c.signal});if(r.ok){t=await r.text();localStorage['tvt_'+C.lista]=t}}catch{}}
+if(t==null)t=localStorage['tvt_'+C.lista]||'';L=parse(t,u)}
 const sigDe=h=>(h.get('last-modified')||'')+'|'+(h.get('content-length')||'');
 async function sigRemota(u){try{const r=await fetch(u,{method:'HEAD',cache:'no-store'});return r.ok?sigDe(r.headers):null}catch{return null}}
 async function baixar(it){const r=await fetch(it.url,{cache:'no-store'});if(!r.ok)throw 0;const tot=+r.headers.get('content-length')||0,rd=r.body.getReader(),ch=[];let n=0;
@@ -74,7 +75,7 @@ async function iniciar(){if(!L.length){menu(1);return}pos=0;cur=0;await carregar
 let ht;function hud(m,k){const h=$('#hud');h.textContent=m;h.style.opacity=1;clearTimeout(ht);ht=setTimeout(()=>h.style.opacity=0,k?4000:2500)}
 async function desenha(){$('#url').value=/^https?:/.test(C.lista)?C.lista:'';$('#aj').value=C.ajuste;$('#rot').value=C.rot;$('#som').value=C.som;
 let q='';try{const e=await navigator.storage.estimate();q=' · usando '+Math.round(e.usage/1048576)+' MB'}catch{}
-const ok=L.filter(i=>estado[i.alt||i.url]=='ok').length;$('#st').textContent=L.length?`${L.length} itens na lista, ${ok} salvos no aparelho${q}.`:'Cole o link da sua lista M3U para começar.';
+const ok=L.filter(i=>estado[i.alt||i.url]=='ok').length;$('#st').textContent=L.length?`${L.length} itens na lista, ${ok} salvos no aparelho${q}.`:(C.lista?'Não consegui ler essa lista. Confira o link e a internet.':'Cole o link da sua lista M3U para começar.');
 $('#ls').innerHTML='';for(const it of L){const li=document.createElement('li'),s=estado[it.alt||it.url]||'';li.textContent=({ok:'✔ ',baixando:'⬇ ',erro:'✖ ','ao vivo':'📡 '}[s]||'… ')+it.nome;$('#ls').append(li)}}
 function menu(on){$('#menu').classList.toggle('on',on);if(on){desenha();$('#url').focus()}}
 let taps=[];addEventListener('pointerdown',e=>{if(mudoForcado){mudoForcado=0;V.forEach(v=>v.muted=C.som=='0')}
@@ -87,6 +88,9 @@ $('#salvar').onclick=async()=>{C.lista=$('#url').value.trim();salvaC();menu(0);h
 $('#arq').onchange=async e=>{const f=e.target.files[0];if(!f)return;localStorage.tvtxt=await f.text();C.lista='arquivo';salvaC();menu(0);await carregarLista();await iniciar();sync(1)};
 for(const[id,k]of[['aj','ajuste'],['rot','rot'],['som','som']])$('#'+id).onchange=e=>{C[k]=e.target.value;salvaC();V.forEach(v=>{ajustar(v);v.muted=C.som=='0'})};
 $('#sync').onclick=()=>{sync();hud('Sincronizando…',1)};
+$('#desat').onclick=async()=>{if(!confirm('Desativar e apagar a lista atual?'))return;for(const k of await dkeys())await ddel(k);
+Object.keys(localStorage).filter(k=>k.startsWith('tvt')).forEach(k=>localStorage.removeItem(k));C.lista='';salvaC();L=[];estado={};
+V.forEach(v=>{v.pause();v.removeAttribute('src');v.load();v.classList.remove('on')});desenha()};
 $('#limpa').onclick=async()=>{if(!confirm('Apagar todos os vídeos baixados?'))return;for(const k of await dkeys())await ddel(k);estado={};desenha()};
 let lt=-1,ls=0;setInterval(()=>{const el=V[cur];if(!L.length||!el||$('#menu').classList.contains('on'))return;
 if(el.paused&&!el.ended)el.play().catch(()=>{});
