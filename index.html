@@ -38,9 +38,10 @@ const db=new Promise((ok,er)=>{const r=indexedDB.open('tvo',1);r.onupgradeneeded
 const tx=async(m,f)=>{const d=await db;return new Promise((ok,er)=>{const t=d.transaction('v',m),q=f(t.objectStore('v'));t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>er(t.error)})};
 const dget=k=>tx('readonly',s=>s.get(k)),dput=(k,v)=>tx('readwrite',s=>s.put(v,k)),ddel=k=>tx('readwrite',s=>s.delete(k)),dkeys=()=>tx('readonly',s=>s.getAllKeys());
 const fixHttps=(u,b)=>{try{if(location.protocol!='https:'||!/^https:/.test(b))return u;const x=new URL(u),l=new URL(b);if(x.protocol=='http:'&&x.pathname.startsWith(l.pathname.replace(/[^\/]*$/,'')))return l.origin+x.pathname+x.search}catch{}return u};
+const altDe=u=>{const m=u.match(/^(https?:\/\/[^\/]+\/live\/[^\/]+)\/stream\.m3u8(\?.*)?$/);return m?m[1]+'/master_loop.mp4':''};
 const parse=(t,base)=>{const o=[];let n='';for(let l of t.split(/\r?\n/)){l=l.trim();if(!l)continue;
 if(l.startsWith('#EXTINF'))n=l.split(',').slice(1).join(',').trim();
-else if(l[0]!='#'){let u=l;try{u=new URL(l,/^https?:/.test(base)?base:undefined).href}catch{}u=fixHttps(u,base);if(/^https?:/.test(u))o.push({url:u,nome:n||decodeURIComponent(u.split('/').pop()),live:/\.m3u8?(\?|$)/i.test(u)});n=''}}return o};
+else if(l[0]!='#'){let u=l;try{u=new URL(l,/^https?:/.test(base)?base:undefined).href}catch{}u=fixHttps(u,base);if(/^https?:/.test(u))o.push({alt:altDe(u),url:u,nome:n||decodeURIComponent(u.split('/').pop()),live:/\.m3u8?(\?|$)/i.test(u)});n=''}}return o};
 async function carregarLista(){let t=null;if(/^https?:/.test(C.lista)){try{const c=new AbortController();setTimeout(()=>c.abort(),8000);
 const r=await fetch(C.lista,{cache:'no-store',signal:c.signal});if(r.ok){t=await r.text();localStorage.tvtxt=t}}catch{}}
 if(t==null)t=localStorage.tvtxt||'';const n=parse(t,C.lista);if(n.length||!L.length)L=n}
@@ -50,13 +51,14 @@ async function baixar(it){const r=await fetch(it.url,{cache:'no-store'});if(!r.o
 for(;;){const{done,value}=await rd.read();if(done)break;ch.push(value);n+=value.length;hud('Baixando '+it.nome+(tot?' '+Math.round(n*100/tot)+'%':''),1)}
 if(tot&&n!=tot)throw 0;await dput(it.url,{blob:new Blob(ch,{type:'video/mp4'}),sig:sigDe(r.headers)})}
 async function sync(pular){if(syncing)return;syncing=1;try{if(!pular)await carregarLista();
-const urls=new Set(L.map(i=>i.url));if(L.length)for(const k of await dkeys())if(!urls.has(k))await ddel(k);
-for(const it of L){if(it.live){estado[it.url]='ao vivo';continue}const rec=await dget(it.url),s=await sigRemota(it.url);
-if(rec&&(!s||rec.sig===s)){estado[it.url]='ok';continue}if(s===null&&!rec){estado[it.url]='erro';continue}
-estado[it.url]='baixando';let ok=0;for(let t=0;t<3&&!ok;t++)try{await baixar(it);ok=1}catch{await new Promise(r=>setTimeout(r,2000))}
-estado[it.url]=ok?'ok':'erro'}hud('Sincronizado ✔')}catch(e){}syncing=0;if($('#menu').classList.contains('on'))desenha()}
+const keep=new Set(L.map(i=>i.alt||i.url));if(L.length)for(const k of await dkeys())if(!keep.has(k))await ddel(k);
+for(const it of L){const key=it.alt||it.url;if(it.live&&!it.alt){estado[key]='ao vivo';continue}
+const rec=await dget(key),s=await sigRemota(key);
+if(rec&&(!s||rec.sig===s)){estado[key]='ok';continue}if(s===null&&!rec){estado[key]=it.alt?'ao vivo':'erro';continue}
+estado[key]='baixando';let ok=0;for(let t=0;t<3&&!ok;t++)try{await baixar({url:key,nome:it.nome});ok=1}catch{await new Promise(r=>setTimeout(r,2000))}
+estado[key]=ok?'ok':'erro'}hud('Sincronizado ✔')}catch(e){}syncing=0;if($('#menu').classList.contains('on'))desenha()}
 async function carregar(el,i){const it=L[i];el._it=it;if(el._u){URL.revokeObjectURL(el._u);el._u=0}
-const r=it.live?null:await dget(it.url);el.src=r?(el._u=URL.createObjectURL(r.blob)):it.url;el.loop=L.length==1;el.muted=mudoForcado||C.som=='0';el.load()}
+const r=(it.live&&!it.alt)?null:await dget(it.alt||it.url);el.src=r?(el._u=URL.createObjectURL(r.blob)):it.url;el.loop=L.length==1;el.muted=mudoForcado||C.som=='0';el.load()}
 function ajustar(el){const W=innerWidth,H=innerHeight,vw=el.videoWidth,vh=el.videoHeight;let r=0;if(vw&&+C.rot&&((vw>vh)!=(W>H)))r=+C.rot;
 Object.assign(el.style,{width:(r?H:W)+'px',height:(r?W:H)+'px',objectFit:C.ajuste=='cobrir'?'cover':'contain',transform:`translate(-50%,-50%) rotate(${r}deg)`})}
 async function tocarEl(el){ajustar(el);el.classList.add('on');V[1-cur].classList.remove('on');
@@ -72,8 +74,8 @@ async function iniciar(){if(!L.length){menu(1);return}pos=0;cur=0;await carregar
 let ht;function hud(m,k){const h=$('#hud');h.textContent=m;h.style.opacity=1;clearTimeout(ht);ht=setTimeout(()=>h.style.opacity=0,k?4000:2500)}
 async function desenha(){$('#url').value=/^https?:/.test(C.lista)?C.lista:'';$('#aj').value=C.ajuste;$('#rot').value=C.rot;$('#som').value=C.som;
 let q='';try{const e=await navigator.storage.estimate();q=' · usando '+Math.round(e.usage/1048576)+' MB'}catch{}
-const ok=L.filter(i=>estado[i.url]=='ok').length;$('#st').textContent=L.length?`${L.length} itens na lista, ${ok} salvos no aparelho${q}.`:'Cole o link da sua lista M3U para começar.';
-$('#ls').innerHTML='';for(const it of L){const li=document.createElement('li'),s=estado[it.url]||'';li.textContent=({ok:'✔ ',baixando:'⬇ ',erro:'✖ ','ao vivo':'📡 '}[s]||'… ')+it.nome;$('#ls').append(li)}}
+const ok=L.filter(i=>estado[i.alt||i.url]=='ok').length;$('#st').textContent=L.length?`${L.length} itens na lista, ${ok} salvos no aparelho${q}.`:'Cole o link da sua lista M3U para começar.';
+$('#ls').innerHTML='';for(const it of L){const li=document.createElement('li'),s=estado[it.alt||it.url]||'';li.textContent=({ok:'✔ ',baixando:'⬇ ',erro:'✖ ','ao vivo':'📡 '}[s]||'… ')+it.nome;$('#ls').append(li)}}
 function menu(on){$('#menu').classList.toggle('on',on);if(on){desenha();$('#url').focus()}}
 let taps=[];addEventListener('pointerdown',e=>{if(mudoForcado){mudoForcado=0;V.forEach(v=>v.muted=C.som=='0')}
 if(document.fullscreenElement==null&&!matchMedia('(display-mode: fullscreen)').matches)document.documentElement.requestFullscreen?.().catch(()=>{});
@@ -86,6 +88,9 @@ $('#arq').onchange=async e=>{const f=e.target.files[0];if(!f)return;localStorage
 for(const[id,k]of[['aj','ajuste'],['rot','rot'],['som','som']])$('#'+id).onchange=e=>{C[k]=e.target.value;salvaC();V.forEach(v=>{ajustar(v);v.muted=C.som=='0'})};
 $('#sync').onclick=()=>{sync();hud('Sincronizando…',1)};
 $('#limpa').onclick=async()=>{if(!confirm('Apagar todos os vídeos baixados?'))return;for(const k of await dkeys())await ddel(k);estado={};desenha()};
+let lt=-1,ls=0;setInterval(()=>{const el=V[cur];if(!L.length||!el||$('#menu').classList.contains('on'))return;
+if(el.paused&&!el.ended)el.play().catch(()=>{});
+if(el.currentTime===lt&&!el.ended){ls++;if(ls>=3){ls=0;carregar(el,pos).then(()=>tocarEl(el))}}else ls=0;lt=el.currentTime},5000);
 (async()=>{navigator.serviceWorker?.register('sw.js').catch(()=>{});navigator.storage?.persist?.();
 const wl=async()=>{try{await navigator.wakeLock.request('screen')}catch{}};wl();document.addEventListener('visibilitychange',()=>document.visibilityState=='visible'&&wl());
 await carregarLista();await iniciar();sync(1);setInterval(()=>sync(),10*60*1000);addEventListener('online',()=>sync())})();
