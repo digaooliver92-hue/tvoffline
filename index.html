@@ -21,7 +21,7 @@ input:focus,select:focus,button:focus{outline:3px solid var(--ac);outline-offset
 <div id="menu"><div class="pn">
 <h1>TV Offline</h1><p id="st"></p>
 <label for="url">Link da lista M3U</label><input id="url" type="url" placeholder="http://seuservidor/live/tv24h.m3u" inputmode="url">
-<button class="pri" id="salvar">Salvar e baixar vídeos</button>
+<label for="sv">Listas salvas (a escolhida abre sempre)</label><select id="sv"></select><button class="pri" id="salvar">Salvar e baixar vídeos</button>
 <label for="arq">Ou escolha um arquivo .m3u do aparelho</label><input id="arq" type="file" accept=".m3u,.m3u8,.txt,audio/x-mpegurl,application/vnd.apple.mpegurl">
 <div class="g"><div><label for="aj">Ajuste</label><select id="aj"><option value="conter">Barras pretas</option><option value="cobrir">Preencher</option></select></div>
 <div><label for="rot">Girar vídeo</label><select id="rot"><option value="0">Não girar</option><option value="90">90° (TV virada)</option><option value="270">270°</option></select></div>
@@ -31,7 +31,7 @@ input:focus,select:focus,button:focus{outline:3px solid var(--ac);outline-offset
 <script>
 const $=s=>document.querySelector(s),V=[$('#a'),$('#b')],P=new URLSearchParams(location.search);
 let C={lista:'',ajuste:'conter',rot:'0',som:'1',...JSON.parse(localStorage.tvo||'{}')};
-for(const k of['lista','ajuste','rot','som'])if(P.get(k)!=null)C[k]=P.get(k);
+for(const k of['lista','ajuste','rot','som'])if(P.get(k)!=null&&P.has('forcar'))C[k]=P.get(k);
 const salvaC=()=>localStorage.tvo=JSON.stringify(C);salvaC();
 let L=[],cur=0,pos=0,errs=0,mudoForcado=0,syncing=0,estado={};
 const db=new Promise((ok,er)=>{const r=indexedDB.open('tvo',1);r.onupgradeneeded=()=>r.result.createObjectStore('v');r.onsuccess=()=>ok(r.result);r.onerror=()=>er(r.error)});
@@ -95,6 +95,21 @@ $('#limpa').onclick=async()=>{if(!confirm('Apagar todos os vídeos baixados?'))r
 let lt=-1,ls=0;setInterval(()=>{const el=V[cur];if(!L.length||!el||$('#menu').classList.contains('on'))return;
 if(el.paused&&!el.ended)el.play().catch(()=>{});
 if(el.currentTime===lt&&!el.ended){ls++;if(ls>=3){ls=0;carregar(el,pos).then(()=>tocarEl(el))}}else ls=0;lt=el.currentTime},5000);
+/*LISTAS2*/
+const TL=()=>{try{return JSON.parse(localStorage.tvl2||'[]')}catch{return[]}};
+const salvaTL=a=>localStorage.tvl2=JSON.stringify(a);
+function guarda(u){if(!/^https?:/.test(u))return;salvaTL([u,...TL().filter(x=>x!=u)].slice(0,20))}
+function desSv(){const sv=$('#sv');sv.innerHTML='';const o0=document.createElement('option');o0.value='';o0.textContent='— nenhuma —';sv.append(o0);
+for(const u of TL()){const o=document.createElement('option');o.value=u;o.textContent=u.replace(/^https?:\/\//,'').slice(0,50);if(u==C.lista)o.selected=true;sv.append(o)}}
+const desenha0=desenha;desenha=async function(){await desenha0();desSv()};
+$('#salvar').addEventListener('click',()=>guarda($('#url').value.trim()));
+$('#sv').onchange=async e=>{const u=e.target.value;if(!u)return;C.lista=u;salvaC();menu(0);hud('Trocando de lista…',1);await carregarLista();await iniciar();sync(1)};
+$('#desat').textContent='Remover esta lista';
+$('#desat').onclick=async()=>{if(!confirm('Remover esta lista e apagar os videos dela?'))return;
+salvaTL(TL().filter(x=>x!=C.lista));for(const k of await dkeys())await ddel(k);
+Object.keys(localStorage).filter(k=>k.startsWith('tvt')).forEach(k=>localStorage.removeItem(k));
+C.lista='';salvaC();L=[];estado={};V.forEach(v=>{v.pause();v.removeAttribute('src');v.load();v.classList.remove('on')});desenha()};
+if(/^https?:/.test(C.lista)&&!TL().includes(C.lista))guarda(C.lista);
 (async()=>{navigator.serviceWorker?.register('sw.js').catch(()=>{});navigator.serviceWorker?.addEventListener('controllerchange',()=>{if(!window._r){window._r=1;location.reload()}});navigator.storage?.persist?.();
 const wl=async()=>{try{await navigator.wakeLock.request('screen')}catch{}};wl();document.addEventListener('visibilitychange',()=>document.visibilityState=='visible'&&wl());
 await carregarLista();await iniciar();sync(1);setInterval(()=>sync(),10*60*1000);addEventListener('online',()=>sync())})();
