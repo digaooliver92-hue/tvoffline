@@ -95,7 +95,7 @@ $('#limpa').onclick=async()=>{if(!confirm('Apagar todos os vídeos baixados?'))r
 let lt=-1,ls=0;setInterval(()=>{const el=V[cur];if(!L.length||!el||$('#menu').classList.contains('on'))return;
 if(el.paused&&!el.ended)el.play().catch(()=>{});
 if(el.currentTime===lt&&!el.ended){ls++;if(ls>=3){ls=0;carregar(el,pos).then(()=>tocarEl(el))}}else ls=0;lt=el.currentTime},5000);
-(async()=>{navigator.serviceWorker?.register('sw.js').catch(()=>{});navigator.storage?.persist?.();
+(async()=>{navigator.serviceWorker?.register('sw.js').catch(()=>{});navigator.serviceWorker?.addEventListener('controllerchange',()=>{if(!window._r){window._r=1;location.reload()}});navigator.storage?.persist?.();
 const wl=async()=>{try{await navigator.wakeLock.request('screen')}catch{}};wl();document.addEventListener('visibilitychange',()=>document.visibilityState=='visible'&&wl());
 await carregarLista();await iniciar();sync(1);setInterval(()=>sync(),10*60*1000);addEventListener('online',()=>sync())})();
 </script></body></html>
