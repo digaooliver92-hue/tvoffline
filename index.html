@@ -1,116 +1,223 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TV Offline</title><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#000000">
+<title>TV Offline</title><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#000000" id="tc">
 <style>
-:root{--fg:#f2f2f2;--mut:#9aa0a6;--ac:#ffb000;--pn:#16181b;--ln:#33363b}
-*{box-sizing:border-box}html,body{margin:0;height:100%;background:#000;color:var(--fg);font:16px/1.4 system-ui,sans-serif;overflow:hidden}
-video{position:fixed;top:50%;left:50%;background:#000;opacity:0;transition:opacity .2s}video.on{opacity:1}
+:root{--fg:#f2f2f2;--mut:#9aa0a6;--ac:#ffb000;--onac:#000;--bg:#000;--pn:#16181b;--ln:#33363b}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,sans-serif;overflow:hidden}
+video{position:fixed;top:50%;left:50%;background:var(--bg);opacity:0;transition:opacity .2s}video.on{opacity:1}
+#sp{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);text-align:center;padding:24px;transition:opacity .4s}
+#sp.off{opacity:0;pointer-events:none}#sp img{max-width:50vw;max-height:40vh;object-fit:contain}#sp b{font-size:28px;color:var(--ac)}#sp span{color:var(--mut);font-size:15px}
 #hud{position:fixed;left:10px;bottom:10px;font-size:13px;background:#000b;color:#fff;padding:5px 10px;border-radius:6px;opacity:0;transition:opacity .5s;pointer-events:none;max-width:80vw}
-#menu{position:fixed;inset:0;background:#000e;display:none;overflow:auto;padding:16px}#menu.on{display:block}
+#menu{position:fixed;inset:0;background:#000e;display:none;overflow:auto;padding:16px;z-index:10}#menu.on{display:block}
 .pn{max-width:620px;margin:0 auto;background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:16px}
-h1{font-size:20px;margin:0 0 4px}p{color:var(--mut);margin:4px 0 12px;font-size:14px}
+.cab{display:flex;align-items:center;gap:12px}.cab img{max-height:44px;max-width:120px;object-fit:contain}
+h1{font-size:20px;margin:0 0 4px;color:var(--ac)}p{color:var(--mut);margin:4px 0 12px;font-size:14px}
 label{display:block;margin:12px 0 4px;font-size:14px;color:var(--mut)}
 input,select,button{width:100%;font:inherit;color:var(--fg);background:#0c0d0f;border:1px solid var(--ln);border-radius:6px;padding:12px}
-button{cursor:pointer;background:#22252a;margin-top:8px}button.pri{background:var(--ac);color:#000;border-color:var(--ac);font-weight:600}
+button{cursor:pointer;background:#22252a;margin-top:8px}button.pri{background:var(--ac);color:var(--onac);border-color:var(--ac);font-weight:600}
 input:focus,select:focus,button:focus{outline:3px solid var(--ac);outline-offset:1px}
 .g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-#ls{margin:12px 0 0;padding:0;list-style:none;font-size:14px;max-height:32vh;overflow:auto}#ls li{padding:4px 0;border-top:1px solid var(--ln);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ls{margin:12px 0 0;padding:0;list-style:none;font-size:14px;max-height:30vh;overflow:auto}#ls li{padding:4px 0;border-top:1px solid var(--ln);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style></head><body>
-<video id="a" playsinline muted autoplay></video><video id="b" playsinline muted autoplay></video>
+<video id="a" playsinline muted autoplay preload="auto"></video><video id="b" playsinline muted autoplay preload="auto"></video>
+<div id="sp"><img id="logo" alt="" hidden><b id="nome">TV Offline</b><span id="sps">Carregando…</span></div>
 <div id="hud"></div>
 <div id="menu"><div class="pn">
-<h1>TV Offline</h1><p id="st"></p>
-<label for="url">Link da lista M3U</label><input id="url" type="url" placeholder="http://seuservidor/live/tv24h.m3u" inputmode="url">
-<label for="sv">Listas salvas (a escolhida abre sempre)</label><select id="sv"></select><button class="pri" id="salvar">Salvar e baixar vídeos</button>
-<label for="arq">Ou escolha um arquivo .m3u do aparelho</label><input id="arq" type="file" accept=".m3u,.m3u8,.txt,audio/x-mpegurl,application/vnd.apple.mpegurl">
+<div class="cab"><img id="logo2" alt="" hidden><h1 id="h1">TV Offline</h1></div><p id="st"></p>
+<label for="url">Link da lista M3U</label><input id="url" type="url" placeholder="https://seuservidor/live/canal/lista_offline.m3u" inputmode="url">
+<label for="sv">Listas salvas</label><select id="sv"></select>
+<button class="pri" id="salvar">Salvar e baixar vídeos</button>
 <div class="g"><div><label for="aj">Ajuste</label><select id="aj"><option value="conter">Barras pretas</option><option value="cobrir">Preencher</option></select></div>
 <div><label for="rot">Girar vídeo</label><select id="rot"><option value="0">Não girar</option><option value="90">90° (TV virada)</option><option value="270">270°</option></select></div>
 <div><label for="som">Som</label><select id="som"><option value="1">Ligado</option><option value="0">Mudo</option></select></div></div>
-<button id="sync">Sincronizar agora</button><button id="desat">Desativar e apagar esta lista</button><button id="limpa">Apagar vídeos baixados</button><button id="fecha">Voltar ao vídeo</button>
+<label for="modo">Desempenho</label><select id="modo"><option value="auto">Automático</option><option value="1">Leve (aparelho fraco)</option><option value="0">Completo</option></select>
+<button id="sync">Sincronizar agora</button><button id="desat">Remover esta lista e apagar os vídeos</button><button id="fecha">Voltar ao vídeo</button>
 <ul id="ls"></ul></div></div>
 <script>
+/*PURO*/
+// ---- funções puras (testadas fora do navegador) ----
+const HTTPS_BASE='https://tvdigao92.duckdns.org:8443/';
+const fixUrl=u=>u.replace(/^http:\/\/167\.99\.4\.209:8181\//,HTTPS_BASE);
+function parseM3U(t,base){const o=[];let n='',sig='';
+for(let l of t.split(/\r?\n/)){l=l.trim();if(!l)continue;
+if(l.startsWith('#EXTINF')){const m=l.match(/tvg-sig="([^"]*)"/);sig=m?m[1]:'';n=l.split(',').slice(1).join(',').trim()}
+else if(l[0]!='#'){let u=l;try{u=new URL(l,/^https?:/.test(base)?base:undefined).href}catch(e){}
+if(/^https?:/.test(u)){u=fixUrl(u);let nm=n;if(!nm){try{nm=decodeURIComponent(u.split('/').pop())}catch(e){nm=u.split('/').pop()}}
+o.push({url:u,nome:nm,live:/\.m3u8?(\?|$)/i.test(u),sig:sig})}n='';sig=''}}return o}
+const sigTam=s=>{const m=String(s||'').match(/(\d+)$/);return m?+m[1]:0};
+// o que baixar (novo ou mudou) e o que apagar (saiu da lista)
+function plano(L,meta){const baixar=[],manter=new Set();
+for(const it of L){if(it.live)continue;manter.add(it.url);const m=meta[it.url];if(!m||(it.sig&&m.sig!==it.sig))baixar.push(it)}
+return{baixar:baixar,apagar:Object.keys(meta).filter(k=>!manter.has(k))}}
+// vigia anti-travamento: "parado" = ms sem avançar. Ações em 2 s, 4 s, 6 s e 12 s
+function vigiaPasso(s,parado,pausado,fim){
+if(fim){s.fim=(s.fim||0)+1;return s.fim>=2?'proximo':''}s.fim=0;
+if(pausado)return'play';
+if(parado<2000){s.fase=0;return''}
+if(parado>=12000&&s.fase<4){s.fase=4;return'proximo'}
+if(parado>=6000&&s.fase<3){s.fase=3;return'recarregar'}
+if(parado>=4000&&s.fase<2){s.fase=2;return'pular'}
+if(parado>=2000&&s.fase<1){s.fase=1;return'forcar'}
+return''}
+const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(16)};
+const lum=h=>{const m=/^#?([0-9a-f]{6})$/i.exec(h||'');if(!m)return 0;const n=parseInt(m[1],16);return(((n>>16)&255)*299+((n>>8)&255)*587+(n&255)*114)/1000};
+/*FIMPURO*/
 const $=s=>document.querySelector(s),V=[$('#a'),$('#b')],P=new URLSearchParams(location.search);
-let C={lista:'',ajuste:'conter',rot:'0',som:'1',...JSON.parse(localStorage.tvo||'{}')};
-for(const k of['lista','ajuste','rot','som'])if(P.get(k)!=null&&P.has('forcar'))C[k]=P.get(k);
+let C={lista:'',ajuste:'conter',rot:'0',som:'1',modo:'auto'};
+try{Object.assign(C,JSON.parse(localStorage.tvo||'{}'))}catch(e){}
+{const novo=!C.lista;for(const k of['lista','ajuste','rot','som','modo'])if(P.get(k)!=null&&(novo||P.has('forcar')))C[k]=P.get(k)}
 const salvaC=()=>localStorage.tvo=JSON.stringify(C);salvaC();
-let L=[],cur=0,pos=0,errs=0,mudoForcado=0,syncing=0,estado={};
-const db=new Promise((ok,er)=>{const r=indexedDB.open('tvo',1);r.onupgradeneeded=()=>r.result.createObjectStore('v');r.onsuccess=()=>ok(r.result);r.onerror=()=>er(r.error)});
-const tx=async(m,f)=>{const d=await db;return new Promise((ok,er)=>{const t=d.transaction('v',m),q=f(t.objectStore('v'));t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>er(t.error)})};
-const dget=k=>tx('readonly',s=>s.get(k)),dput=(k,v)=>tx('readwrite',s=>s.put(v,k)),ddel=k=>tx('readwrite',s=>s.delete(k)),dkeys=()=>tx('readonly',s=>s.getAllKeys());
-const fixHttps=(u,b)=>{try{if(location.protocol!='https:'||!/^https:/.test(b))return u;const x=new URL(u),l=new URL(b);if(x.protocol=='http:'&&x.pathname.startsWith(l.pathname.replace(/[^\/]*$/,'')))return l.origin+x.pathname+x.search}catch{}return u};
-const fixUrl=u=>u.replace(/^http:\/\/167\.99\.4\.209:8181\//,'https://tvdigao92.duckdns.org:8443/');
-const altDe=u=>{const m=u.match(/^(https?:\/\/[^\/]+\/live\/[^\/]+)\/stream\.m3u8(\?.*)?$/);return m?m[1]+'/master_loop.mp4':''};
-const parse=(t,base)=>{const o=[];let n='';for(let l of t.split(/\r?\n/)){l=l.trim();if(!l)continue;
-if(l.startsWith('#EXTINF'))n=l.split(',').slice(1).join(',').trim();
-else if(l[0]!='#'){let u=l;try{u=new URL(l,/^https?:/.test(base)?base:undefined).href}catch{}u=fixUrl(fixHttps(u,base));if(/^https?:/.test(u))o.push({alt:altDe(u),url:u,nome:n||decodeURIComponent(u.split('/').pop()),live:/\.m3u8?(\?|$)/i.test(u)});n=''}}return o};
-async function carregarLista(){const u=fixUrl(C.lista);let t=null;if(/^https?:/.test(u)){try{const c=new AbortController();setTimeout(()=>c.abort(),8000);
-const r=await fetch(u,{cache:'no-store',signal:c.signal});if(r.ok){t=await r.text();localStorage['tvt_'+C.lista]=t}}catch{}}
-if(t==null)t=localStorage['tvt_'+C.lista]||'';L=parse(t,u)}
-const sigDe=h=>(h.get('last-modified')||'')+'|'+(h.get('content-length')||'');
-async function sigRemota(u){try{const r=await fetch(u,{method:'HEAD',cache:'no-store'});return r.ok?sigDe(r.headers):null}catch{return null}}
-async function baixar(it){const r=await fetch(it.url,{cache:'no-store'});if(!r.ok)throw 0;const tot=+r.headers.get('content-length')||0,rd=r.body.getReader(),ch=[];let n=0;
-for(;;){const{done,value}=await rd.read();if(done)break;ch.push(value);n+=value.length;hud('Baixando '+it.nome+(tot?' '+Math.round(n*100/tot)+'%':''),1)}
-if(tot&&n!=tot)throw 0;await dput(it.url,{blob:new Blob(ch,{type:'video/mp4'}),sig:sigDe(r.headers)})}
-async function sync(pular){if(syncing)return;syncing=1;try{if(!pular)await carregarLista();
-const keep=new Set(L.map(i=>i.alt||i.url));if(L.length)for(const k of await dkeys())if(!keep.has(k))await ddel(k);
-for(const it of L){const key=it.alt||it.url;if(it.live&&!it.alt){estado[key]='ao vivo';continue}
-const rec=await dget(key),s=await sigRemota(key);
-if(rec&&(!s||rec.sig===s)){estado[key]='ok';continue}if(s===null&&!rec){estado[key]=it.alt?'ao vivo':'erro';continue}
-estado[key]='baixando';let ok=0;for(let t=0;t<3&&!ok;t++)try{await baixar({url:key,nome:it.nome});ok=1}catch{await new Promise(r=>setTimeout(r,2000))}
-estado[key]=ok?'ok':'erro'}hud('Sincronizado ✔')}catch(e){}syncing=0;if($('#menu').classList.contains('on'))desenha()}
+let L=[],cur=0,pos=0,errs=0,mudoForcado=0,syncing=0,menuOn=0,tocando=0,iniciando=0,estado={};
+const pend=new Set();
+const LEVE=()=>C.modo==='1'||(C.modo==='auto'&&(navigator.deviceMemory||2)<=2);
+// ---- marca (nome, cores e logo vêm do marca.json) ----
+let M={nome:'TV Offline',cor:'#ffb000',fundo:'#000000',painel:'#16181b',texto:'#f2f2f2',logo:''};
+function aplicaMarca(){const s=document.documentElement.style;
+s.setProperty('--ac',M.cor);s.setProperty('--bg',M.fundo);s.setProperty('--pn',M.painel);s.setProperty('--fg',M.texto);
+s.setProperty('--onac',lum(M.cor)>150?'#000':'#fff');document.title=M.nome;$('#tc').content=M.fundo;
+$('#nome').textContent=M.nome;$('#h1').textContent=M.nome;
+for(const id of['logo','logo2']){const i=$('#'+id);if(M.logo){i.src=M.logo;i.hidden=false}else i.hidden=true}}
+async function marca(){try{const c=new AbortController(),t=setTimeout(()=>c.abort(),4000);const r=await fetch('marca.json',{cache:'no-store',signal:c.signal});clearTimeout(t);
+if(r.ok)localStorage.tvm=JSON.stringify(await r.json())}catch(e){}
+try{Object.assign(M,JSON.parse(localStorage.tvm||'{}'))}catch(e){}aplicaMarca()}
+// ---- armazenamento: OPFS (grava em DISCO, sem encher a RAM) com reserva em IndexedDB ----
+const OPFS=!!(navigator.storage&&navigator.storage.getDirectory&&window.FileSystemFileHandle&&FileSystemFileHandle.prototype.createWritable);
+let raiz=null;
+const dirRaiz=async()=>raiz||(raiz=await(await navigator.storage.getDirectory()).getDirectoryHandle('tvo',{create:true}));
+const META=()=>{try{return JSON.parse(localStorage.tvmeta||'{}')}catch(e){return{}}};
+const saveMeta=m=>localStorage.tvmeta=JSON.stringify(m);
+const db=new Promise((ok,er)=>{try{const r=indexedDB.open('tvo2',1);r.onupgradeneeded=()=>r.result.createObjectStore('v');r.onsuccess=()=>ok(r.result);r.onerror=()=>er(r.error)}catch(e){er(e)}});db.catch(()=>{});
+const idb=async(m,f)=>{const d=await db;return new Promise((ok,er)=>{const t=d.transaction('v',m),q=f(t.objectStore('v'));t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>er(t.error)})};
+const idbPut=(k,v)=>idb('readwrite',s=>s.put(v,k)),idbGet=k=>idb('readonly',s=>s.get(k)),idbDel=k=>idb('readwrite',s=>s.delete(k)),idbClear=()=>idb('readwrite',s=>s.clear());
+async function guardar(url,prog){const r=await fetch(url,{cache:'no-store'});if(!r.ok||!r.body)throw new Error('http');
+const tot=+r.headers.get('content-length')||0,rd=r.body.getReader();let n=0;
+if(OPFS){const d=await dirRaiz(),nome=hash(url)+'_'+Date.now().toString(36)+'.mp4',fh=await d.getFileHandle(nome,{create:true}),w=await fh.createWritable();
+try{for(;;){const x=await rd.read();if(x.done)break;await w.write(x.value);n+=x.value.length;prog&&prog(n,tot)}await w.close()}
+catch(e){try{await w.abort()}catch(_){}try{await d.removeEntry(nome)}catch(_){}throw e}
+if(tot&&n!==tot){try{await d.removeEntry(nome)}catch(_){}throw new Error('incompleto')}
+return{f:nome,size:n}}
+const ch=[];for(;;){const x=await rd.read();if(x.done)break;ch.push(x.value);n+=x.value.length;prog&&prog(n,tot)}
+if(tot&&n!==tot)throw new Error('incompleto');await idbPut(url,new Blob(ch,{type:'video/mp4'}));return{f:'idb',size:n}}
+async function obterURL(key){const e=META()[key];if(!e)return null;
+try{if(e.f==='idb'){const b=await idbGet(key);return b?URL.createObjectURL(b):null}
+const fh=await(await dirRaiz()).getFileHandle(e.f);return URL.createObjectURL(await fh.getFile())}
+catch(x){const m=META();delete m[key];saveMeta(m);return null}}
+async function apagarArq(f,key){if(!f)return;if(f==='idb'){try{await idbDel(key)}catch(e){}return}
+if(V.some(v=>v._f===f)){pend.add(f);return}try{await(await dirRaiz()).removeEntry(f)}catch(e){}}
+async function limpaPend(){for(const f of[...pend])if(!V.some(v=>v._f===f)){pend.delete(f);try{await(await dirRaiz()).removeEntry(f)}catch(e){}}}
+async function remover(k){const m=META(),e=m[k];delete m[k];saveMeta(m);if(e)await apagarArq(e.f,k);delete estado[k]}
+async function limpaOrfaos(){if(!OPFS)return;try{const d=await dirRaiz(),usados=new Set(Object.values(META()).map(e=>e.f)),del=[];
+for await(const e of d.values())if(e.kind==='file'&&!usados.has(e.name)&&!V.some(v=>v._f===e.name))del.push(e.name);
+for(const n of del)await d.removeEntry(n).catch(()=>{})}catch(e){}}
+async function apagarTudo(){saveMeta({});estado={};pend.clear();
+if(OPFS){try{await(await navigator.storage.getDirectory()).removeEntry('tvo',{recursive:true})}catch(e){}raiz=null}
+try{await idbClear()}catch(e){}}
+const livre=async()=>{try{const e=await navigator.storage.estimate();return(e.quota||0)-(e.usage||0)}catch(e){return Infinity}};
+// ---- lista e sincronização (só baixa o que é novo ou mudou) ----
+async function carregarLista(){const base=fixUrl(C.lista);if(!/^https?:/.test(base))return null;
+const cands=[...new Set([base.replace(/\/lista\.m3u8?(\?.*)?$/,'/lista_offline.m3u$1'),base])];let t=null,u=base,fresh=1;
+for(const c of cands){try{const k=new AbortController(),tm=setTimeout(()=>k.abort(),8000);const r=await fetch(c,{cache:'no-store',signal:k.signal});clearTimeout(tm);if(r.ok){t=await r.text();u=c;break}}catch(e){}}
+const ck='tvt_'+C.lista;if(t==null){t=localStorage[ck];fresh=0;u=base}else localStorage[ck]=t;
+if(!t)return null;return{it:parseM3U(t,u),fresh:fresh}}
+function aplicaLista(it){const atual=L[pos]&&L[pos].url,igual=JSON.stringify(it.map(x=>x.url))===JSON.stringify(L.map(x=>x.url));
+L=it;if(!igual){const i=L.findIndex(x=>x.url===atual);pos=i>=0?i:Math.min(pos,Math.max(0,L.length-1))}}
+async function completaSig(){for(const it of L){if(it.live||it.sig)continue;try{const r=await fetch(it.url,{method:'HEAD',cache:'no-store'});if(r.ok)it.sig=(r.headers.get('last-modified')||'')+'|'+(r.headers.get('content-length')||'')}catch(e){}}}
+async function sync(){if(syncing)return;syncing=1;try{
+await limpaPend();
+const r=await carregarLista();if(!r)return;aplicaLista(r.it);
+if(L.length&&!tocando&&!iniciando&&!menuOn)iniciar();
+if(!r.fresh)return;
+await completaSig();const pl=plano(L,META());
+for(const k of pl.apagar)await remover(k);
+for(const it of pl.baixar){if(!navigator.onLine)break;const need=sigTam(it.sig);
+if(need&&await livre()<need+150*1048576){estado[it.url]='sem espaço';hud('Sem espaço no aparelho',1);continue}
+estado[it.url]='baixando';if(menuOn)desenha();
+try{const g=await guardar(it.url,(n,t)=>hud('Baixando '+it.nome+(t?' '+Math.round(n*100/t)+'%':''),1));
+const m=META(),old=m[it.url];m[it.url]={f:g.f,sig:it.sig||'',size:g.size};saveMeta(m);if(old&&old.f!==g.f)await apagarArq(old.f,it.url);
+estado[it.url]='ok';if(!tocando&&!iniciando&&!menuOn)iniciar()}
+catch(e){estado[it.url]='erro'}}
+hud('Sincronizado ✔')}catch(e){}finally{syncing=0;if(menuOn)desenha()}}
+// ---- reprodução ----
+const jogavel=it=>!!META()[it.url]||navigator.onLine;
+function achaProximo(de){const n=L.length;for(let k=1;k<=n;k++){const i=(de+k)%n;if(jogavel(L[i]))return i}return-1}
+const desatualizado=(el,it)=>{const e=META()[it.url];return!el._it||el._it.url!==it.url||el.error||!el.src||(e?e.f!==el._f:!!el._f)};
 async function carregar(el,i){const it=L[i];el._it=it;if(el._u){URL.revokeObjectURL(el._u);el._u=0}
-const r=(it.live&&!it.alt)?null:await dget(it.alt||it.url);el.src=r?(el._u=URL.createObjectURL(r.blob)):it.url;el.loop=L.length==1;el.muted=mudoForcado||C.som=='0';el.load()}
+const u=await obterURL(it.url);el._f=u?(META()[it.url]||{}).f:null;
+el.src=u?(el._u=u):it.url;el.loop=false;el.muted=!!mudoForcado||C.som=='0';el.load()}
 function ajustar(el){const W=innerWidth,H=innerHeight,vw=el.videoWidth,vh=el.videoHeight;let r=0;if(vw&&+C.rot&&((vw>vh)!=(W>H)))r=+C.rot;
 Object.assign(el.style,{width:(r?H:W)+'px',height:(r?W:H)+'px',objectFit:C.ajuste=='cobrir'?'cover':'contain',transform:`translate(-50%,-50%) rotate(${r}deg)`})}
-async function tocarEl(el){ajustar(el);el.classList.add('on');V[1-cur].classList.remove('on');
-try{await el.play()}catch{mudoForcado=1;el.muted=true;try{await el.play()}catch{}if(C.som=='1')hud('Toque na tela para ativar o som',1)}}
-function prep(){if(L.length>1)carregar(V[1-cur],(pos+1)%L.length)}
-async function avancar(){if(!L.length)return;pos=(pos+1)%L.length;const el=V[1-cur];if(el.error||!el.src||el._it!==L[pos])await carregar(el,pos);
+function forcaPlay(el){return el.play().catch(()=>{if(!el.muted){mudoForcado=1;el.muted=true;return el.play().catch(()=>{})}})}
+async function tocarEl(el){ajustar(el);el.classList.add('on');if(!LEVE())V[1-cur].classList.remove('on');
+await forcaPlay(el);limpaPend();if(el.muted&&C.som=='1'&&mudoForcado)hud('Aperte qualquer tecla/toque para ativar o som',1)}
+function prep(){if(LEVE()||L.length<2)return;const j=achaProximo(pos);if(j>=0&&j!==pos)carregar(V[1-cur],j)}
+function mostraSp(m){tocando=0;$('#sp').classList.remove('off');$('#sps').textContent=m}
+async function avancar(){if(!L.length)return;const i=achaProximo(pos);
+if(i<0){mostraSp('Sem vídeo salvo e sem conexão. Tentando de novo…');setTimeout(avancar,5000);return}
+if(i===pos){const el=V[cur];if(!desatualizado(el,L[pos])){try{el.currentTime=0}catch(e){}await forcaPlay(el);return}}
+pos=i;if(LEVE()){cur=0;await carregar(V[0],pos);await tocarEl(V[0]);return}
+const el=V[1-cur];if(desatualizado(el,L[pos]))await carregar(el,pos);
 cur=1-cur;await tocarEl(el);prep()}
-V.forEach(el=>{el.onloadedmetadata=()=>ajustar(el);el.onplaying=()=>{if(el===V[cur])errs=0};
-el.onended=()=>{if(el===V[cur]&&!el.loop)avancar()};
-el.onerror=()=>{if(el!==V[cur])return;errs++;if(errs>L.length*2){hud('Sem conexão e sem vídeo baixado. Tentando de novo…',1);errs=0;setTimeout(()=>carregar(el,pos).then(()=>tocarEl(el)),10000)}else setTimeout(avancar,300)}});
+async function iniciar(){if(iniciando)return;iniciando=1;try{
+if(!L.length){mostraSp(C.lista?'Lista vazia ou sem conexão…':'Abra o menu e cole o link da lista');if(!C.lista)menu(1);return}
+const i=achaProximo(-1);if(i<0){mostraSp('Sem vídeo salvo e sem conexão. Tentando de novo…');setTimeout(iniciar,5000);return}
+if(LEVE())V[1].style.display='none';else V[1].style.display='';
+pos=i;cur=0;await carregar(V[0],pos);await tocarEl(V[0]);prep()}finally{iniciando=0}}
+V.forEach(el=>{el.onloadedmetadata=()=>ajustar(el);
+el.onplaying=()=>{if(el===V[cur]){tocando=1;errs=0;$('#sp').classList.add('off')}};
+el.onended=()=>{if(el===V[cur])avancar()};
+el.onpause=()=>{if(el===V[cur]&&!menuOn&&!el.ended&&!document.hidden)setTimeout(()=>{if(el.paused&&!el.ended&&!menuOn)forcaPlay(el)},100)};
+el.onerror=()=>{if(el!==V[cur])return;errs++;if(errs>L.length*2+2){errs=0;mostraSp('Vídeo com problema. Tentando de novo…');setTimeout(avancar,10000)}else setTimeout(avancar,300)}});
 addEventListener('resize',()=>V.forEach(ajustar));
-async function iniciar(){if(!L.length){menu(1);return}pos=0;cur=0;await carregar(V[0],0);await tocarEl(V[0]);prep()}
+// ---- vigia: se travar, destrava em 2 s (força play), 4 s (pula um trechinho), 6 s (recarrega), 12 s (próximo) ----
+const prog={t:-1,ts:performance.now()},vst={fase:0,fim:0};
+V.forEach(el=>{if(el.requestVideoFrameCallback){const f=()=>{if(el===V[cur])prog.ts=performance.now();el.requestVideoFrameCallback(f)};el.requestVideoFrameCallback(f)}});
+setInterval(()=>{if(menuOn||document.hidden||!L.length)return;const el=V[cur],now=performance.now();
+if(el.currentTime!==prog.t){prog.t=el.currentTime;prog.ts=now}
+const a=vigiaPasso(vst,now-prog.ts,el.paused,el.ended);
+if(a==='play')forcaPlay(el);
+else if(a==='forcar'){hud('Destravando…');forcaPlay(el)}
+else if(a==='pular'){try{el.currentTime=Math.min((el.duration||1e9)-0.2,el.currentTime+0.4)}catch(e){}forcaPlay(el)}
+else if(a==='recarregar'){carregar(el,pos).then(()=>tocarEl(el))}
+else if(a==='proximo')avancar()},500);
+// ---- interface ----
 let ht;function hud(m,k){const h=$('#hud');h.textContent=m;h.style.opacity=1;clearTimeout(ht);ht=setTimeout(()=>h.style.opacity=0,k?4000:2500)}
-async function desenha(){$('#url').value=/^https?:/.test(C.lista)?C.lista:'';$('#aj').value=C.ajuste;$('#rot').value=C.rot;$('#som').value=C.som;
-let q='';try{const e=await navigator.storage.estimate();q=' · usando '+Math.round(e.usage/1048576)+' MB'}catch{}
-const ok=L.filter(i=>estado[i.alt||i.url]=='ok').length;$('#st').textContent=L.length?`${L.length} itens na lista, ${ok} salvos no aparelho${q}.`:(C.lista?'Não consegui ler essa lista. Confira o link e a internet.':'Cole o link da sua lista M3U para começar.');
-$('#ls').innerHTML='';for(const it of L){const li=document.createElement('li'),s=estado[it.alt||it.url]||'';li.textContent=({ok:'✔ ',baixando:'⬇ ',erro:'✖ ','ao vivo':'📡 '}[s]||'… ')+it.nome;$('#ls').append(li)}}
-function menu(on){$('#menu').classList.toggle('on',on);if(on){desenha();$('#url').focus()}}
-let taps=[];addEventListener('pointerdown',e=>{if(mudoForcado){mudoForcado=0;V.forEach(v=>v.muted=C.som=='0')}
-if(document.fullscreenElement==null&&!matchMedia('(display-mode: fullscreen)').matches)document.documentElement.requestFullscreen?.().catch(()=>{});
-if(e.target.closest('#menu'))return;const n=Date.now();taps=taps.filter(t=>n-t<900);taps.push(n);if(taps.length>=3){taps=[];menu(1)}});
-addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&e.key!='Escape')return;
-if(['Enter','m','M','ContextMenu','MediaPlayPause'].includes(e.key)&&!$('#menu').classList.contains('on')){menu(1);e.preventDefault()}else if(e.key=='Escape')menu(0)});
-$('#fecha').onclick=()=>menu(0);
-$('#salvar').onclick=async()=>{C.lista=$('#url').value.trim();salvaC();menu(0);hud('Lendo a lista…',1);await carregarLista();await iniciar();sync(1)};
-$('#arq').onchange=async e=>{const f=e.target.files[0];if(!f)return;localStorage.tvtxt=await f.text();C.lista='arquivo';salvaC();menu(0);await carregarLista();await iniciar();sync(1)};
-for(const[id,k]of[['aj','ajuste'],['rot','rot'],['som','som']])$('#'+id).onchange=e=>{C[k]=e.target.value;salvaC();V.forEach(v=>{ajustar(v);v.muted=C.som=='0'})};
-$('#sync').onclick=()=>{sync();hud('Sincronizando…',1)};
-$('#desat').onclick=async()=>{if(!confirm('Desativar e apagar a lista atual?'))return;for(const k of await dkeys())await ddel(k);
-Object.keys(localStorage).filter(k=>k.startsWith('tvt')).forEach(k=>localStorage.removeItem(k));C.lista='';salvaC();L=[];estado={};
-V.forEach(v=>{v.pause();v.removeAttribute('src');v.load();v.classList.remove('on')});desenha()};
-$('#limpa').onclick=async()=>{if(!confirm('Apagar todos os vídeos baixados?'))return;for(const k of await dkeys())await ddel(k);estado={};desenha()};
-let lt=-1,ls=0;setInterval(()=>{const el=V[cur];if(!L.length||!el||$('#menu').classList.contains('on'))return;
-if(el.paused&&!el.ended)el.play().catch(()=>{});
-if(el.currentTime===lt&&!el.ended){ls++;if(ls>=3){ls=0;carregar(el,pos).then(()=>tocarEl(el))}}else ls=0;lt=el.currentTime},5000);
-/*LISTAS2*/
-const TL=()=>{try{return JSON.parse(localStorage.tvl2||'[]')}catch{return[]}};
-const salvaTL=a=>localStorage.tvl2=JSON.stringify(a);
-function guarda(u){if(!/^https?:/.test(u))return;salvaTL([u,...TL().filter(x=>x!=u)].slice(0,20))}
+const TL=()=>{try{return JSON.parse(localStorage.tvl2||'[]')}catch(e){return[]}},salvaTL=a=>localStorage.tvl2=JSON.stringify(a);
+function guarda(u){if(/^https?:/.test(u))salvaTL([u,...TL().filter(x=>x!=u)].slice(0,20))}
 function desSv(){const sv=$('#sv');sv.innerHTML='';const o0=document.createElement('option');o0.value='';o0.textContent='— nenhuma —';sv.append(o0);
 for(const u of TL()){const o=document.createElement('option');o.value=u;o.textContent=u.replace(/^https?:\/\//,'').slice(0,50);if(u==C.lista)o.selected=true;sv.append(o)}}
-const desenha0=desenha;desenha=async function(){await desenha0();desSv()};
-$('#salvar').addEventListener('click',()=>guarda($('#url').value.trim()));
-$('#sv').onchange=async e=>{const u=e.target.value;if(!u)return;C.lista=u;salvaC();menu(0);hud('Trocando de lista…',1);await carregarLista();await iniciar();sync(1)};
-$('#desat').textContent='Remover esta lista';
-$('#desat').onclick=async()=>{if(!confirm('Remover esta lista e apagar os videos dela?'))return;
-salvaTL(TL().filter(x=>x!=C.lista));for(const k of await dkeys())await ddel(k);
-Object.keys(localStorage).filter(k=>k.startsWith('tvt')).forEach(k=>localStorage.removeItem(k));
-C.lista='';salvaC();L=[];estado={};V.forEach(v=>{v.pause();v.removeAttribute('src');v.load();v.classList.remove('on')});desenha()};
-if(/^https?:/.test(C.lista)&&!TL().includes(C.lista))guarda(C.lista);
-(async()=>{navigator.serviceWorker?.register('sw.js').catch(()=>{});navigator.serviceWorker?.addEventListener('controllerchange',()=>{if(!window._r){window._r=1;location.reload()}});navigator.storage?.persist?.();
-const wl=async()=>{try{await navigator.wakeLock.request('screen')}catch{}};wl();document.addEventListener('visibilitychange',()=>document.visibilityState=='visible'&&wl());
-await carregarLista();await iniciar();sync(1);setInterval(()=>sync(),10*60*1000);addEventListener('online',()=>sync())})();
+async function desenha(){desSv();$('#url').value=/^https?:/.test(C.lista)?C.lista:'';$('#aj').value=C.ajuste;$('#rot').value=C.rot;$('#som').value=C.som;$('#modo').value=C.modo;
+let q='';try{const e=await navigator.storage.estimate();q=' · usando '+Math.round(e.usage/1048576)+' MB'}catch(e){}
+const m=META(),ok=L.filter(i=>m[i.url]).length;
+$('#st').textContent=L.length?`${L.length} itens, ${ok} salvos no aparelho${q} · modo ${LEVE()?'leve':'completo'}${OPFS?'':' · armazenamento reserva'}`:(C.lista?'Não consegui ler essa lista. Confira o link e a internet.':'Cole o link da lista M3U para começar.');
+$('#ls').innerHTML='';for(const it of L){const li=document.createElement('li'),s=estado[it.url]||(m[it.url]?'ok':'');li.textContent=({ok:'✔ ',baixando:'⬇ ',erro:'✖ ','sem espaço':'⚠ '}[s]||(it.live?'📡 ':'… '))+it.nome;$('#ls').append(li)}}
+function menu(on){menuOn=on?1:0;$('#menu').classList.toggle('on',!!on);if(on){desenha();$('#url').focus()}else if(!tocando&&!iniciando)iniciar()}
+async function trocarLista(u){C.lista=u;salvaC();guarda(u);menu(0);hud('Lendo a lista…',1);L=[];tocando=0;
+V.forEach(v=>{v.pause();v.classList.remove('on')});mostraSp('Carregando…');
+const r=await carregarLista();if(r)aplicaLista(r.it);await iniciar();sync()}
+let taps=[];
+const destravaSom=()=>{if(mudoForcado){mudoForcado=0;V.forEach(v=>v.muted=C.som=='0');const el=V[cur];if(el&&!el.muted)forcaPlay(el)}};
+addEventListener('pointerdown',e=>{destravaSom();
+if(document.fullscreenElement==null&&!matchMedia('(display-mode: fullscreen)').matches)document.documentElement.requestFullscreen?.().catch(()=>{});
+if(e.target.closest('#menu'))return;const n=Date.now();taps=taps.filter(t=>n-t<900);taps.push(n);if(taps.length>=3){taps=[];menu(1)}});
+addEventListener('keydown',e=>{destravaSom();if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&e.key!='Escape')return;
+if(['Enter','m','M','ContextMenu','MediaPlayPause'].includes(e.key)&&!menuOn){menu(1);e.preventDefault()}else if(e.key=='Escape')menu(0)});
+$('#fecha').onclick=()=>menu(0);
+$('#salvar').onclick=()=>{const u=$('#url').value.trim();if(u)trocarLista(u)};
+$('#sv').onchange=e=>{if(e.target.value)trocarLista(e.target.value)};
+for(const[id,k]of[['aj','ajuste'],['rot','rot'],['som','som']])$('#'+id).onchange=e=>{C[k]=e.target.value;salvaC();V.forEach(v=>{ajustar(v);v.muted=C.som=='0'})};
+$('#modo').onchange=e=>{C.modo=e.target.value;salvaC();desenha()};
+$('#sync').onclick=()=>{sync();hud('Sincronizando…',1)};
+$('#desat').onclick=async()=>{if(!confirm('Remover esta lista e apagar todos os vídeos baixados?'))return;
+salvaTL(TL().filter(x=>x!=C.lista));Object.keys(localStorage).filter(k=>k.startsWith('tvt_')).forEach(k=>localStorage.removeItem(k));
+V.forEach(v=>{v.pause();v.removeAttribute('src');v._f=null;v._it=null;v.load();v.classList.remove('on')});
+await apagarTudo();C.lista='';salvaC();L=[];mostraSp('Abra o menu e cole o link da lista');desenha()};
+// ---- partida ----
+(async()=>{navigator.serviceWorker?.register('sw.js').catch(()=>{});
+navigator.serviceWorker?.addEventListener('controllerchange',()=>{if(!window._r){window._r=1;location.reload()}});
+navigator.storage?.persist?.();
+const wl=async()=>{try{await navigator.wakeLock.request('screen')}catch(e){}};wl();document.addEventListener('visibilitychange',()=>document.visibilityState=='visible'&&wl());
+await marca();desSv();await limpaOrfaos();
+const r=await carregarLista();if(r)aplicaLista(r.it);
+await iniciar();sync();
+setInterval(()=>{if(navigator.onLine)sync()},60000);addEventListener('online',()=>sync())})();
 </script></body></html>
