@@ -1,0 +1,43 @@
+name: Compilar APK TV Offline
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Garantir Keystore e Icone
+        run: |
+          cd android-apk/app
+          if [ ! -f release.keystore ]; then
+            keytool -genkeypair -v -keystore release.keystore -alias tvoffline -keyalg RSA -keysize 2048 -validity 10000 -storepass tvofflinepass -keypass tvofflinepass -dname "CN=TVOffline, OU=MidiaIndoor, O=TVDigao, L=BR, S=BR, C=BR"
+          fi
+          mkdir -p src/main/res/drawable
+          [ -f ../../icon-512.png ] && cp -f ../../icon-512.png src/main/res/drawable/ic_launcher.png || true
+
+      - name: Instalar Gradle e Compilar APK Release
+        run: |
+          cd android-apk
+          gradle assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../TV-Offline.apk
+
+      - name: Publicar APK como Artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: TV-Offline-APK
+          path: TV-Offline.apk
+          if-no-files-found: error

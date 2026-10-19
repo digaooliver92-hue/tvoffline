@@ -1,0 +1,394 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TV Offline</title><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#000000" id="tc">
+<style>
+:root{--fg:#f2f2f2;--mut:#9aa0a6;--ac:#ffb000;--onac:#000;--bg:#000;--pn:#16181b;--ln:#33363b}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,sans-serif;overflow:hidden;user-select:none}
+video{position:fixed;top:50%;left:50%;background:var(--bg);opacity:0;transition:opacity .2s}video.on{opacity:1}
+#sp{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:var(--bg);text-align:center;padding:24px;transition:opacity .4s}
+#sp.off{opacity:0;pointer-events:none}#sp img{max-width:50vw;max-height:36vh;object-fit:contain}#sp b{font-size:28px;color:var(--ac)}#sp span{color:var(--mut);font-size:15px}
+.mac-box{background:#111316;border:1px dashed var(--ac);border-radius:8px;padding:8px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:monospace;font-size:14px}
+.mac-box b{color:var(--ac);font-size:15px;letter-spacing:1px}
+#hud{position:fixed;left:10px;bottom:10px;font-size:13px;background:#000b;color:#fff;padding:5px 10px;border-radius:6px;opacity:0;transition:opacity .5s;pointer-events:none;max-width:85vw;z-index:5}
+#menu{position:fixed;inset:0;background:#000e;display:none;overflow:auto;padding:16px;z-index:10}#menu.on{display:block}
+.pn{max-width:640px;margin:0 auto;background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:16px}
+.cab{display:flex;align-items:center;gap:12px}.cab img{max-height:48px;max-width:130px;object-fit:contain}
+h1{font-size:20px;margin:0 0 2px;color:var(--ac)}p{color:var(--mut);margin:4px 0 10px;font-size:13px}
+label{display:block;margin:10px 0 4px;font-size:13px;color:var(--mut)}
+input,select,button{width:100%;font:inherit;color:var(--fg);background:#0c0d0f;border:1px solid var(--ln);border-radius:6px;padding:11px}
+button{cursor:pointer;background:#22252a;margin-top:8px}button.pri{background:var(--ac);color:var(--onac);border-color:var(--ac);font-weight:600}
+input:focus,select:focus,button:focus{outline:3px solid var(--ac);outline-offset:1px}
+.g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#ls{margin:12px 0 0;padding:0;list-style:none;font-size:13px;max-height:26vh;overflow:auto}#ls li{padding:4px 0;border-top:1px solid var(--ln);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#rodape{text-align:center;font-size:12px;color:var(--mut);margin-top:12px}
+</style></head><body>
+<video id="a" playsinline muted autoplay preload="auto"></video><video id="b" playsinline muted autoplay preload="auto"></video>
+<div id="sp">
+  <img id="logo" alt="" hidden>
+  <b id="nome">TV Offline</b>
+  <span id="subt" hidden></span>
+  <span id="sps">Carregando…</span>
+  <div class="mac-box" style="margin-top:14px"><span>ID / MAC: <b id="sp_mac">...</b></span></div>
+</div>
+<div id="hud"></div>
+<div id="menu"><div class="pn">
+<div class="cab"><img id="logo2" alt="" hidden><div><h1 id="h1">TV Offline</h1><p id="subt2" style="margin:0"></p></div></div>
+<div class="mac-box">
+  <span>MAC / ID do Aparelho: <b id="txt_mac">...</b></span>
+  <button id="btn_copiar" style="width:auto;margin:0;padding:6px 10px;font-size:12px">Copiar</button>
+</div>
+<p id="st"></p>
+<div class="g2">
+  <div><label for="tela">Nome desta Tela / Ponto (Anunciantes)</label><input id="tela" type="text" placeholder="Ex: Padaria Centro"></div>
+  <div><label for="arm">Salvar vídeos baixados em</label><select id="arm"><option value="interno">Armazenamento do Aparelho</option><option value="sd">Cartão de Memória (SD)</option></select></div>
+</div>
+<label for="url">Link da lista M3U</label><input id="url" type="url" placeholder="https://tvdigao92.duckdns.org:8443/live/canal/lista_offline.m3u" inputmode="url">
+<label for="sv">Listas salvas</label><select id="sv"></select>
+<button class="pri" id="salvar">Salvar configurações e baixar vídeos</button>
+<div class="g"><div><label for="aj">Ajuste</label><select id="aj"><option value="conter">Barras pretas</option><option value="cobrir">Preencher</option></select></div>
+<div><label for="rot">Girar vídeo</label><select id="rot"><option value="0">Não girar</option><option value="90">90° (TV virada)</option><option value="270">270°</option></select></div>
+<div><label for="som">Som</label><select id="som"><option value="1">Ligado</option><option value="0">Mudo</option></select></div></div>
+<label for="modo">Desempenho</label><select id="modo"><option value="auto">Automático</option><option value="1">Leve (aparelho fraco)</option><option value="0">Completo</option></select>
+<button id="sync">Sincronizar agora (Lista + Controle Remoto)</button><button id="desat">Remover esta lista e apagar os vídeos</button><button id="fecha">Voltar ao vídeo</button>
+<ul id="ls"></ul>
+<div id="rodape"></div>
+</div></div>
+<script>
+/*PURO*/
+const HTTPS_BASE='https://tvdigao92.duckdns.org:8443/';
+const fixUrl=u=>String(u||'').replace(/^http:\/\/167\.99\.4\.209:8181\//,HTTPS_BASE);
+function parseM3U(t,base){const o=[];let n='',sig='';
+for(let l of t.split(/\r?\n/)){l=l.trim();if(!l)continue;
+if(l.startsWith('#EXTINF')){const m=l.match(/tvg-sig="([^"]*)"/);sig=m?m[1]:'';n=l.split(',').slice(1).join(',').trim()}
+else if(l[0]!='#'){let u=l;try{u=new URL(l,/^https?:/.test(base)?base:undefined).href}catch(e){}
+if(/^https?:/.test(u)){u=fixUrl(u);let nm=n;if(!nm){try{nm=decodeURIComponent(u.split('/').pop())}catch(e){nm=u.split('/').pop()}}
+o.push({url:u,nome:nm,live:/\.m3u8?(\?|$)/i.test(u),sig:sig})}n='';sig=''}}return o}
+const sigTam=s=>{const m=String(s||'').match(/(\d+)$/);return m?+m[1]:0};
+function plano(L,meta){const baixar=[],manter=new Set();
+for(const it of L){if(it.live)continue;manter.add(it.url);const m=meta[it.url];if(!m||(it.sig&&m.sig!==it.sig))baixar.push(it)}
+return{baixar:baixar,apagar:Object.keys(meta).filter(k=>!manter.has(k))}}
+function vigiaPasso(s,parado,pausado,fim){
+if(fim){s.fim=(s.fim||0)+1;return s.fim>=2?'proximo':''}s.fim=0;
+if(pausado)return'play';
+if(parado<2000){s.fase=0;return''}
+if(parado>=12000&&s.fase<4){s.fase=4;return'proximo'}
+if(parado>=6000&&s.fase<3){s.fase=3;return'recarregar'}
+if(parado>=4000&&s.fase<2){s.fase=2;return'pular'}
+if(parado>=2000&&s.fase<1){s.fase=1;return'forcar'}
+return''}
+const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(16)};
+const lum=h=>{const m=/^#?([0-9a-f]{6})$/i.exec(h||'');if(!m)return 0;const n=parseInt(m[1],16);return(((n>>16)&255)*299+((n>>8)&255)*587+(n&255)*114)/1000};
+/*FIMPURO*/
+const $=s=>document.querySelector(s),V=[$('#a'),$('#b')],P=new URLSearchParams(location.search);
+const NATIVO=!!window.TVNative;
+let C={lista:'',ajuste:'conter',rot:'0',som:'1',modo:'auto',arm:'interno',tela:''};
+try{Object.assign(C,JSON.parse(localStorage.tvo||'{}'))}catch(e){}
+{const novo=!C.lista;for(const k of['lista','ajuste','rot','som','modo','arm','tela'])if(P.get(k)!=null&&(novo||P.has('forcar')))C[k]=P.get(k)}
+const salvaC=()=>{localStorage.tvo=JSON.stringify(C);if(NATIVO){try{TVNative.setStorageTarget(C.arm)}catch(e){}}};salvaC();
+
+// ---- Identificação MAC / ID Único do Aparelho ----
+function obterMac(){
+  if(NATIVO){try{const m=TVNative.getMacId();if(m){localStorage.tvmac=m;return m}}catch(e){}}
+  if(localStorage.tvmac)return localStorage.tvmac;
+  const hex=()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase();
+  const m='02:'+hex()+':'+hex()+':'+hex()+':'+hex()+':'+hex();
+  localStorage.tvmac=m;return m;
+}
+const MEU_MAC=obterMac();
+$('#sp_mac').textContent=MEU_MAC;$('#txt_mac').textContent=MEU_MAC;
+$('#btn_copiar').onclick=()=>{navigator.clipboard?.writeText(MEU_MAC).catch(()=>{});hud('MAC copiado: '+MEU_MAC)};
+
+let L=[],cur=0,pos=0,errs=0,mudoForcado=0,syncing=0,menuOn=0,tocando=0,iniciando=0,estado={};
+const pend=new Set();
+const LEVE=()=>C.modo==='1'||(C.modo==='auto'&&(navigator.deviceMemory||2)<=2);
+
+// ---- Marca Personalizada ----
+let M={nome:'TV Offline',cor:'#ffb000',fundo:'#000000',painel:'#16181b',texto:'#f2f2f2',logo:'',subtitulo:'',rodape:''};
+function aplicaMarca(){const s=document.documentElement.style;
+s.setProperty('--ac',M.cor);s.setProperty('--bg',M.fundo);s.setProperty('--pn',M.painel);s.setProperty('--fg',M.texto);
+s.setProperty('--onac',lum(M.cor)>150?'#000':'#fff');document.title=M.nome;$('#tc').content=M.fundo;
+$('#nome').textContent=M.nome;$('#h1').textContent=M.nome;
+$('#subt').textContent=M.subtitulo||'';$('#subt').hidden=!M.subtitulo;
+$('#subt2').textContent=M.subtitulo||'';$('#rodape').textContent=M.rodape||'';
+for(const id of['logo','logo2']){const i=$('#'+id);if(M.logo){i.src=M.logo;i.hidden=false}else i.hidden=true}}
+async function marca(){
+  for(const u of['marca.json',HTTPS_BASE+'live/marca.json']){
+    try{const c=new AbortController(),t=setTimeout(()=>c.abort(),3500);const r=await fetch(u,{cache:'no-store',signal:c.signal});clearTimeout(t);
+    if(r.ok){localStorage.tvm=JSON.stringify(await r.json());break}}catch(e){}
+  }
+  try{Object.assign(M,JSON.parse(localStorage.tvm||'{}'))}catch(e){}aplicaMarca()
+}
+
+// ---- Contagem de Exibições (Anunciantes / Proof of Play) ----
+function filaLogs(){try{return JSON.parse(localStorage.tvlogs||'[]')}catch(e){return[]}}
+function salvaLogs(a){localStorage.tvlogs=JSON.stringify(a.slice(-2000))}
+function registrarExibicao(it){
+  if(!it)return;
+  const canal=(C.lista.match(/\/live\/([^\/]+)\//)||[])[1]||'geral';
+  const item={mac:MEU_MAC,tela:C.tela||MEU_MAC,canal:canal,video:it.nome||it.url,ts:new Date().toISOString(),dia:new Date().toISOString().slice(0,10)};
+  const f=filaLogs();f.push(item);salvaLogs(f);
+  enviarLogs();
+}
+let enviandoLog=0;
+async function enviarLogs(){
+  if(enviandoLog||!navigator.onLine)return;
+  const f=filaLogs();if(!f.length)return;
+  enviandoLog=1;
+  try{
+    const r=await fetch(HTTPS_BASE+'api_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mac:MEU_MAC,tela:C.tela||MEU_MAC,eventos:f})});
+    if(r.ok)localStorage.tvlogs='[]';
+  }catch(e){}
+  enviandoLog=0;
+}
+
+// ---- Controle Remoto via MAC (Termux -> VPS -> TV Box) ----
+async function checarRemoto(){
+  try{
+    const c=new AbortController(),t=setTimeout(()=>c.abort(),5000);
+    const r=await fetch(HTTPS_BASE+'live/aparelhos.json?t='+Date.now(),{cache:'no-store',signal:c.signal});
+    clearTimeout(t);if(!r.ok)return;
+    const map=await r.json(),cfg=map[MEU_MAC]||map[MEU_MAC.replace(/:/g,'')];
+    if(!cfg)return;
+    let mudouLista=false;
+    if(cfg.tela&&cfg.tela!==C.tela){C.tela=cfg.tela;$('#tela').value=C.tela;salvaC()}
+    if(cfg.arm&&(cfg.arm==='interno'||cfg.arm==='sd')&&cfg.arm!==C.arm){C.arm=cfg.arm;$('#arm').value=C.arm;salvaC()}
+    if(cfg.rot!=null&&String(cfg.rot)!==String(C.rot)){C.rot=String(cfg.rot);salvaC();V.forEach(ajustar)}
+    if(cfg.lista&&cfg.lista!==C.lista){C.lista=cfg.lista;salvaC();guarda(cfg.lista);mudouLista=true}
+    if(mudouLista){hud('Lista atualizada remotamente pelo painel!',1);L=[];tocando=0;const rl=await carregarLista();if(rl)aplicaLista(rl.it);await iniciar()}
+  }catch(e){}
+}
+
+// ---- Armazenamento Híbrido: Nativo (Interno / Cartão SD) + OPFS + IndexedDB ----
+const OPFS=!NATIVO&&!!(navigator.storage&&navigator.storage.getDirectory&&window.FileSystemFileHandle&&FileSystemFileHandle.prototype.createWritable);
+let raiz=null;
+const dirRaiz=async()=>raiz||(raiz=await(await navigator.storage.getDirectory()).getDirectoryHandle('tvo',{create:true}));
+const META=()=>{try{return JSON.parse(localStorage.tvmeta||'{}')}catch(e){return{}}};
+const saveMeta=m=>localStorage.tvmeta=JSON.stringify(m);
+const db=new Promise((ok,er)=>{try{const r=indexedDB.open('tvo2',1);r.onupgradeneeded=()=>r.result.createObjectStore('v');r.onsuccess=()=>ok(r.result);r.onerror=()=>er(r.error)}catch(e){er(e)}});db.catch(()=>{});
+const idb=async(m,f)=>{const d=await db;return new Promise((ok,er)=>{const t=d.transaction('v',m),q=f(t.objectStore('v'));t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>er(t.error)})};
+const idbPut=(k,v)=>idb('readwrite',s=>s.put(v,k)),idbGet=k=>idb('readonly',s=>s.get(k)),idbDel=k=>idb('readwrite',s=>s.delete(k)),idbClear=()=>idb('readwrite',s=>s.clear());
+
+function infoArmazenamento(){
+  if(!NATIVO)return null;
+  try{return JSON.parse(TVNative.getStorageInfo())}catch(e){return null}
+}
+window.__dlProg=(nome,pct)=>hud('Baixando '+nome+' '+pct+'%',1);
+
+async function guardar(url,prog,itNome){
+  if(NATIVO){
+    const nome='v_'+hash(url)+'_'+Date.now().toString(36)+'.mp4';
+    TVNative.setStorageTarget(C.arm);
+    const res=await new Promise((ok,er)=>{
+      setTimeout(()=>{
+        try{
+          const r=JSON.parse(TVNative.downloadVideo(url,nome,itNome||'vídeo'));
+          r.ok?ok(r):er(new Error(r.err||'erro nativo'));
+        }catch(x){er(x)}
+      },20);
+    });
+    return{f:'nat:'+res.path,size:res.size,loc:res.target};
+  }
+  const r=await fetch(url,{cache:'no-store'});if(!r.ok||!r.body)throw new Error('http');
+  const tot=+r.headers.get('content-length')||0,rd=r.body.getReader();let n=0;
+  if(OPFS){const d=await dirRaiz(),nome=hash(url)+'_'+Date.now().toString(36)+'.mp4',fh=await d.getFileHandle(nome,{create:true}),w=await fh.createWritable();
+  try{for(;;){const x=await rd.read();if(x.done)break;await w.write(x.value);n+=x.value.length;prog&&prog(n,tot)}await w.close()}
+  catch(e){try{await w.abort()}catch(_){}try{await d.removeEntry(nome)}catch(_){}throw e}
+  if(tot&&n!==tot){try{await d.removeEntry(nome)}catch(_){}throw new Error('incompleto')}
+  return{f:nome,size:n}}
+  const ch=[];for(;;){const x=await rd.read();if(x.done)break;ch.push(x.value);n+=x.value.length;prog&&prog(n,tot)}
+  if(tot&&n!==tot)throw new Error('incompleto');await idbPut(url,new Blob(ch,{type:'video/mp4'}));return{f:'idb',size:n}
+}
+
+async function obterURL(key){const e=META()[key];if(!e)return null;
+try{
+  if(String(e.f).startsWith('nat:')){
+    const p=e.f.slice(4);
+    if(NATIVO&&TVNative.fileExists(p))return 'file://'+p;
+    throw new Error('ausente');
+  }
+  if(e.f==='idb'){const b=await idbGet(key);return b?URL.createObjectURL(b):null}
+  const fh=await(await dirRaiz()).getFileHandle(e.f);return URL.createObjectURL(await fh.getFile())
+}catch(x){const m=META();delete m[key];saveMeta(m);return null}}
+
+async function apagarArq(f,key){if(!f)return;
+if(String(f).startsWith('nat:')){if(NATIVO){try{TVNative.deleteFile(f.slice(4))}catch(e){}}return}
+if(f==='idb'){try{await idbDel(key)}catch(e){}return}
+if(V.some(v=>v._f===f)){pend.add(f);return}try{await(await dirRaiz()).removeEntry(f)}catch(e){}}
+
+async function limpaPend(){for(const f of[...pend])if(!V.some(v=>v._f===f)){pend.delete(f);try{await(await dirRaiz()).removeEntry(f)}catch(e){}}}
+async function remover(k){const m=META(),e=m[k];delete m[k];saveMeta(m);if(e)await apagarArq(e.f,k);delete estado[k]}
+async function limpaOrfaos(){if(!OPFS)return;try{const d=await dirRaiz(),usados=new Set(Object.values(META()).map(e=>e.f)),del=[];
+for await(const e of d.values())if(e.kind==='file'&&!usados.has(e.name)&&!V.some(v=>v._f===e.name))del.push(e.name);
+for(const n of del)await d.removeEntry(n).catch(()=>{})}catch(e){}}
+async function apagarTudo(){saveMeta({});estado={};pend.clear();
+if(NATIVO){try{TVNative.clearAllVideos()}catch(e){}}
+if(OPFS){try{await(await navigator.storage.getDirectory()).removeEntry('tvo',{recursive:true})}catch(e){}raiz=null}
+try{await idbClear()}catch(e){}}
+
+const livre=async()=>{
+  if(NATIVO){const inf=infoArmazenamento();if(inf)return(C.arm==='sd'&&inf.sdAvailable)?inf.sdFree:inf.internalFree}
+  try{const e=await navigator.storage.estimate();return(e.quota||0)-(e.usage||0)}catch(e){return Infinity}
+};
+
+// ---- Lista e Sincronização ----
+async function carregarLista(){const base=fixUrl(C.lista);if(!/^https?:/.test(base))return null;
+const cands=[...new Set([base.replace(/\/lista\.m3u8?(\?.*)?$/,'/lista_offline.m3u$1'),base])];let t=null,u=base,fresh=1;
+for(const c of cands){try{const k=new AbortController(),tm=setTimeout(()=>k.abort(),8000);const r=await fetch(c,{cache:'no-store',signal:k.signal});clearTimeout(tm);if(r.ok){t=await r.text();u=c;break}}catch(e){}}
+const ck='tvt_'+C.lista;if(t==null){t=localStorage[ck];fresh=0;u=base}else localStorage[ck]=t;
+if(!t)return null;return{it:parseM3U(t,u),fresh:fresh}}
+function aplicaLista(it){const atual=L[pos]&&L[pos].url,igual=JSON.stringify(it.map(x=>x.url))===JSON.stringify(L.map(x=>x.url));
+L=it;if(!igual){const i=L.findIndex(x=>x.url===atual);pos=i>=0?i:Math.min(pos,Math.max(0,L.length-1))}}
+async function completaSig(){for(const it of L){if(it.live||it.sig)continue;try{const r=await fetch(it.url,{method:'HEAD',cache:'no-store'});if(r.ok)it.sig=(r.headers.get('last-modified')||'')+'|'+(r.headers.get('content-length')||'')}catch(e){}}}
+async function sync(){if(syncing)return;syncing=1;try{
+await checarRemoto();await enviarLogs();await limpaPend();
+const r=await carregarLista();if(!r)return;aplicaLista(r.it);
+if(L.length&&!tocando&&!iniciando&&!menuOn)iniciar();
+if(!r.fresh)return;
+await completaSig();const pl=plano(L,META());
+for(const k of pl.apagar)await remover(k);
+for(const it of pl.baixar){if(!navigator.onLine)break;const need=sigTam(it.sig);
+if(need&&await livre()<need+80*1048576){estado[it.url]='sem espaço';hud('Sem espaço no armazenamento escolhido',1);continue}
+estado[it.url]='baixando';if(menuOn)desenha();
+try{const g=await guardar(it.url,(n,t)=>hud('Baixando '+it.nome+(t?' '+Math.round(n*100/t)+'%':''),1),it.nome);
+const m=META(),old=m[it.url];m[it.url]={f:g.f,sig:it.sig||'',size:g.size,loc:g.loc||C.arm};saveMeta(m);if(old&&old.f!==g.f)await apagarArq(old.f,it.url);
+estado[it.url]='ok';if(!tocando&&!iniciando&&!menuOn)iniciar()}
+catch(e){estado[it.url]='erro'}}
+hud('Sincronizado ✔')}catch(e){}finally{syncing=0;if(menuOn)desenha()}}
+
+// ---- Reprodução ----
+const jogavel=it=>!!META()[it.url]||navigator.onLine;
+function achaProximo(de){const n=L.length;for(let k=1;k<=n;k++){const i=(de+k)%n;if(jogavel(L[i]))return i}return-1}
+const desatualizado=(el,it)=>{const e=META()[it.url];return!el._it||el._it.url!==it.url||el.error||!el.src||(e?e.f!==el._f:!!el._f)};
+async function carregar(el,i){const it=L[i];el._it=it;if(el._u&&el._u.startsWith('blob:')){URL.revokeObjectURL(el._u);el._u=0}
+const u=await obterURL(it.url);el._f=u?(META()[it.url]||{}).f:null;
+el.src=u?(el._u=u):it.url;el.loop=false;el.muted=!!mudoForcado||C.som=='0';el.load()}
+function ajustar(el){const W=innerWidth,H=innerHeight,vw=el.videoWidth,vh=el.videoHeight;let r=0;if(vw&&+C.rot&&((vw>vh)!=(W>H)))r=+C.rot;
+Object.assign(el.style,{width:(r?H:W)+'px',height:(r?W:H)+'px',objectFit:C.ajuste=='cobrir'?'cover':'contain',transform:`translate(-50%,-50%) rotate(${r}deg)`})}
+function forcaPlay(el){return el.play().catch(()=>{if(!el.muted){mudoForcado=1;el.muted=true;return el.play().catch(()=>{})}})}
+async function tocarEl(el){ajustar(el);el.classList.add('on');if(!LEVE())V[1-cur].classList.remove('on');
+await forcaPlay(el);limpaPend();if(el.muted&&C.som=='1'&&mudoForcado)hud('Aperte qualquer tecla/toque para ativar o som',1)}
+function prep(){if(LEVE()||L.length<2)return;const j=achaProximo(pos);if(j>=0&&j!==pos)carregar(V[1-cur],j)}
+function mostraSp(m){tocando=0;$('#sp').classList.remove('off');$('#sps').textContent=m}
+async function avancar(){if(!L.length)return;
+if(L[pos])registrarExibicao(L[pos]);
+const i=achaProximo(pos);
+if(i<0){mostraSp('Sem vídeo salvo e sem conexão. Tentando de novo…');setTimeout(avancar,5000);return}
+if(i===pos){const el=V[cur];if(!desatualizado(el,L[pos])){try{el.currentTime=0}catch(e){}await forcaPlay(el);return}}
+pos=i;if(LEVE()){cur=0;await carregar(V[0],pos);await tocarEl(V[0]);return}
+const el=V[1-cur];if(desatualizado(el,L[pos]))await carregar(el,pos);
+cur=1-cur;await tocarEl(el);prep()}
+async function iniciar(){if(iniciando)return;iniciando=1;try{
+if(!L.length){mostraSp(C.lista?'Lista vazia ou sem conexão…':'Abra o menu (Enter/3 toques) ou vincule pelo MAC: '+MEU_MAC);if(!C.lista)menu(1);return}
+const i=achaProximo(-1);if(i<0){mostraSp('Baixando vídeos para tocar offline…');setTimeout(iniciar,5000);return}
+if(LEVE())V[1].style.display='none';else V[1].style.display='';
+pos=i;cur=0;await carregar(V[0],pos);await tocarEl(V[0]);prep()}finally{iniciando=0}}
+V.forEach(el=>{el.onloadedmetadata=()=>ajustar(el);
+el.onplaying=()=>{if(el===V[cur]){tocando=1;errs=0;$('#sp').classList.add('off')}};
+el.onended=()=>{if(el===V[cur])avancar()};
+el.onpause=()=>{if(el===V[cur]&&!menuOn&&!el.ended&&!document.hidden)setTimeout(()=>{if(el.paused&&!el.ended&&!menuOn)forcaPlay(el)},100)};
+el.onerror=()=>{if(el!==V[cur])return;errs++;if(errs>L.length*2+2){errs=0;mostraSp('Vídeo com problema. Tentando de novo…');setTimeout(avancar,10000)}else setTimeout(avancar,300)}});
+addEventListener('resize',()=>V.forEach(ajustar));
+
+// ---- Vigia Anti-Travamento (2s, 4s, 6s, 12s) ----
+const prog={t:-1,ts:performance.now()},vst={fase:0,fim:0};
+V.forEach(el=>{if(el.requestVideoFrameCallback){const f=()=>{if(el===V[cur])prog.ts=performance.now();el.requestVideoFrameCallback(f)};el.requestVideoFrameCallback(f)}});
+setInterval(()=>{if(menuOn||document.hidden||!L.length)return;const el=V[cur],now=performance.now();
+if(el.currentTime!==prog.t){prog.t=el.currentTime;prog.ts=now}
+const a=vigiaPasso(vst,now-prog.ts,el.paused,el.ended);
+if(a==='play')forcaPlay(el);
+else if(a==='forcar'){hud('Destravando…');forcaPlay(el)}
+else if(a==='pular'){try{el.currentTime=Math.min((el.duration||1e9)-0.2,el.currentTime+0.4)}catch(e){}forcaPlay(el)}
+else if(a==='recarregar'){carregar(el,pos).then(()=>tocarEl(el))}
+else if(a==='proximo')avancar()},500);
+
+// ---- Interface ----
+let ht;function hud(m,k){const h=$('#hud');h.textContent=m;h.style.opacity=1;clearTimeout(ht);ht=setTimeout(()=>h.style.opacity=0,k?4000:2500)}
+const TL=()=>{try{return JSON.parse(localStorage.tvl2||'[]')}catch(e){return[]}},salvaTL=a=>localStorage.tvl2=JSON.stringify(a);
+function guarda(u){if(/^https?:/.test(u))salvaTL([u,...TL().filter(x=>x!=u)].slice(0,20))}
+function desSv(){const sv=$('#sv');sv.innerHTML='';const o0=document.createElement('option');o0.value='';o0.textContent='— escolher lista salva —';sv.append(o0);
+for(const u of TL()){const o=document.createElement('option');o.value=u;o.textContent=u.replace(/^https?:\/\//,'').slice(0,55);if(u==C.lista)o.selected=true;sv.append(o)}}
+
+async function desenha(){
+  desSv();
+  $('#url').value=/^https?:/.test(C.lista)?C.lista:'';
+  $('#tela').value=C.tela||'';
+  $('#aj').value=C.ajuste;$('#rot').value=C.rot;$('#som').value=C.som;$('#modo').value=C.modo;
+  const selArm=$('#arm');
+  if(NATIVO){
+    const inf=infoArmazenamento();
+    if(inf){
+      const intFree=Math.round(inf.internalFree/1048576)+' MB livres';
+      selArm.options[0].textContent='Memória Interna ('+intFree+')';
+      if(inf.sdAvailable){
+        const sdFree=Math.round(inf.sdFree/1048576)+' MB livres';
+        selArm.options[1].textContent='Cartão SD ('+sdFree+')';
+        selArm.options[1].disabled=false;
+      }else{
+        selArm.options[1].textContent='Cartão SD (Não detectado)';
+        selArm.options[1].disabled=true;
+        if(C.arm==='sd'){C.arm='interno';salvaC()}
+      }
+    }
+  }else{
+    selArm.options[0].textContent='Memória Interna (Navegador)';
+    selArm.options[1].textContent='Cartão SD (Exclusivo no App APK)';
+    selArm.options[1].disabled=true;
+  }
+  selArm.value=C.arm;
+  const m=META(),ok=L.filter(i=>m[i.url]).length;
+  let bytesUsados=0;Object.values(m).forEach(v=>{bytesUsados+=(v.size||0)});
+  let q=' · usando '+Math.round(bytesUsados/1048576)+' MB';
+  const locTxt=NATIVO?(C.arm==='sd'?'Cartão SD':'Memória Interna'):(OPFS?'Disco':'Reserva');
+  $('#st').textContent=L.length?`${L.length} vídeos, ${ok} baixados (${locTxt})${q} · modo ${LEVE()?'leve':'completo'}`:(C.lista?'Lista vazia ou sem internet.':'Cole o link M3U ou envie pelo Termux usando o MAC acima.');
+  $('#ls').innerHTML='';for(const it of L){const li=document.createElement('li'),s=estado[it.url]||(m[it.url]?'ok':'');li.textContent=({ok:'✔ ',baixando:'⬇ ',erro:'✖ ','sem espaço':'⚠ '}[s]||(it.live?'📡 ':'… '))+it.nome;$('#ls').append(li)}
+}
+function menu(on){menuOn=on?1:0;$('#menu').classList.toggle('on',!!on);if(on){desenha();$('#url').focus()}else if(!tocando&&!iniciando)iniciar()}
+async function trocarLista(u){
+  C.tela=$('#tela').value.trim();C.arm=$('#arm').value;
+  if(u)C.lista=u;
+  salvaC();if(u)guarda(u);menu(0);hud('Aplicando e sincronizando…',1);L=[];tocando=0;
+  V.forEach(v=>{v.pause();v.classList.remove('on')});mostraSp('Carregando…');
+  const r=await carregarLista();if(r)aplicaLista(r.it);await iniciar();sync()
+}
+let taps=[];
+const destravaSom=()=>{if(mudoForcado){mudoForcado=0;V.forEach(v=>v.muted=C.som=='0');const el=V[cur];if(el&&!el.muted)forcaPlay(el)}};
+addEventListener('pointerdown',e=>{destravaSom();
+if(document.fullscreenElement==null&&!matchMedia('(display-mode: fullscreen)').matches)document.documentElement.requestFullscreen?.().catch(()=>{});
+if(e.target.closest('#menu'))return;const n=Date.now();taps=taps.filter(t=>n-t<900);taps.push(n);if(taps.length>=3){taps=[];menu(1)}});
+addEventListener('keydown',e=>{destravaSom();if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&e.key!='Escape')return;
+if(['Enter','m','M','ContextMenu','MediaPlayPause'].includes(e.key)&&!menuOn){menu(1);e.preventDefault()}else if(e.key=='Escape')menu(0)});
+$('#fecha').onclick=()=>menu(0);
+$('#salvar').onclick=()=>trocarLista($('#url').value.trim()||C.lista);
+$('#sv').onchange=e=>{if(e.target.value){$('#url').value=e.target.value;trocarLista(e.target.value)}};
+$('#arm').onchange=async e=>{
+  const novoArm=e.target.value;
+  if(novoArm!==C.arm){
+    C.arm=novoArm;salvaC();
+    if(Object.keys(META()).length&&confirm('Mudar local para '+(novoArm==='sd'?'Cartão SD':'Memória Interna')+' e baixar os vídeos no novo local agora?')){
+      await apagarTudo();desenha();sync();
+    }else desenha();
+  }
+};
+$('#tela').onchange=e=>{C.tela=e.target.value.trim();salvaC()};
+for(const[id,k]of[['aj','ajuste'],['rot','rot'],['som','som']])$('#'+id).onchange=e=>{C[k]=e.target.value;salvaC();V.forEach(v=>{ajustar(v);v.muted=C.som=='0'})};
+$('#modo').onchange=e=>{C.modo=e.target.value;salvaC();desenha()};
+$('#sync').onclick=()=>{sync();hud('Sincronizando…',1)};
+$('#desat').onclick=async()=>{if(!confirm('Remover esta lista e apagar todos os vídeos baixados?'))return;
+salvaTL(TL().filter(x=>x!=C.lista));Object.keys(localStorage).filter(k=>k.startsWith('tvt_')).forEach(k=>localStorage.removeItem(k));
+V.forEach(v=>{v.pause();v.removeAttribute('src');v._f=null;v._it=null;v.load();v.classList.remove('on')});
+await apagarTudo();C.lista='';salvaC();L=[];mostraSp('Abra o menu e cole o link da lista');desenha()};
+
+// ---- Partida ----
+(async()=>{
+if(!NATIVO){
+  navigator.serviceWorker?.register('sw.js').catch(()=>{});
+  navigator.serviceWorker?.addEventListener('controllerchange',()=>{if(!window._r){window._r=1;location.reload()}});
+  navigator.storage?.persist?.();
+}
+const wl=async()=>{try{await navigator.wakeLock.request('screen')}catch(e){}};wl();document.addEventListener('visibilitychange',()=>document.visibilityState=='visible'&&wl());
+await marca();await checarRemoto();desSv();await limpaOrfaos();
+const r=await carregarLista();if(r)aplicaLista(r.it);
+await iniciar();sync();
+setInterval(()=>{if(navigator.onLine)sync()},60000);addEventListener('online',()=>sync())})();
+</script></body></html>
