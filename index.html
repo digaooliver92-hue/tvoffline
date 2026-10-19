@@ -380,6 +380,7 @@ V.forEach(v=>{v.pause();v.removeAttribute('src');v._f=null;v._it=null;v.load();v
 await apagarTudo();C.lista='';salvaC();L=[];mostraSp('Abra o menu e cole o link da lista');desenha()};
 
 // ---- Partida ----
+// ---- partida ----
 (async()=>{
 if(!NATIVO){
   navigator.serviceWorker?.register('sw.js').catch(()=>{});
@@ -387,8 +388,24 @@ if(!NATIVO){
   navigator.storage?.persist?.();
 }
 const wl=async()=>{try{await navigator.wakeLock.request('screen')}catch(e){}};wl();document.addEventListener('visibilitychange',()=>document.visibilityState=='visible'&&wl());
-await marca();await checarRemoto();desSv();await limpaOrfaos();
+await marca();
+  iniciarAutomatico();
+  return;await checarRemoto();desSv();await limpaOrfaos();
 const r=await carregarLista();if(r)aplicaLista(r.it);
 await iniciar();sync();
 setInterval(()=>{if(navigator.onLine)sync()},60000);addEventListener('online',()=>sync())})();
 </script></body></html>
+
+
+async function iniciarAutomatico(){
+  mostraSp('A a verificar vinculação por MAC...');
+  await checarRemoto();
+  const r = await carregarLista();
+  if(r) aplicaLista(r.it);
+  if(L.length){
+    await iniciar();
+  } else {
+    mostraSp('Aguardando lista via MAC ou menu...');
+    setTimeout(iniciarAutomatico, 4000);
+  }
+}
