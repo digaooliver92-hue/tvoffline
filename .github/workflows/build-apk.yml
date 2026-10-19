@@ -17,9 +17,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Garantir Keystore e Icone
         run: |
           cd android-apk/app
@@ -29,7 +26,7 @@ jobs:
           mkdir -p src/main/res/drawable
           [ -f ../../icon-512.png ] && cp -f ../../icon-512.png src/main/res/drawable/ic_launcher.png || true
 
-      - name: Instalar Gradle e Compilar APK Release
+      - name: Compilar APK Release com Gradle
         run: |
           cd android-apk
           gradle assembleRelease --no-daemon
